@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data: blob: https://media.valorant-api.com; worker-src 'self' blob:;">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frost Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="player-stats.css">
+  <link rel="stylesheet" href="vault-ui.css">
+</head>
+<body>
+  <header id="window-titlebar" class="window-titlebar">
+    <div class="window-titlebar-brand">
+      <img class="window-titlebar-icon" src="../assets/frost-tracker.png" alt="">
+      <span>Frost Tracker</span>
+    </div>
+    <div class="window-controls">
+      <button class="window-control-button" id="window-minimize" type="button" aria-label="Minimize" title="Minimize">
+        <svg aria-hidden="true" viewBox="0 0 12 12"><path d="M2 6h8"></path></svg>
+      </button>
+      <button class="window-control-button" id="window-maximize" type="button" aria-label="Maximize" title="Maximize">
+        <svg class="maximize-icon" aria-hidden="true" viewBox="0 0 12 12"><path d="M2.5 2.5h7v7h-7z"></path></svg>
+        <svg class="restore-icon" aria-hidden="true" viewBox="0 0 12 12"><path d="M4.5 2.5h5v5"></path><path d="M7.5 4.5h-5v5h5z"></path></svg>
+      </button>
+      <button class="window-control-button window-close-button" id="window-close" type="button" aria-label="Close" title="Close">
+        <svg aria-hidden="true" viewBox="0 0 12 12"><path d="m3 3 6 6M9 3 3 9"></path></svg>
+      </button>
+    </div>
+  </header>
+  <main id="vault-gate" class="vault-gate">
+    <section class="vault-gate-panel">
+      <div class="brand-mark"><img src="../assets/frost-tracker.png" alt="Frost Tracker"></div>
+      <div class="eyebrow">FROST TRACKER</div>
+      <h1 id="vault-gate-title">Who's using Frost Tracker?</h1>
+      <p id="vault-gate-description">Choose a profile to unlock its personal vault.</p>
+      <section id="profile-picker-view" class="profile-picker-view" hidden>
+        <div class="profile-picker-toolbar"><span>YOUR PROFILES</span><button id="edit-profiles-button" class="text-button" type="button" aria-pressed="false">Edit</button></div>
+        <div id="profile-picker-list" class="profile-picker-list"></div>
+        <div class="profile-picker-actions"><button id="add-profile-button" class="button button-primary" type="button">+ Add profile</button></div>
+      </section>
+      <button id="back-to-profiles" class="text-button profile-back" type="button" hidden><span class="profile-back-icon" aria-hidden="true">←</span><span>All profiles</span></button>
+      <div id="selected-profile-header" class="selected-profile-header" hidden><div id="selected-profile-avatar" class="profile-avatar-large"></div><b id="selected-profile-name"></b></div>
+      <form id="vault-gate-form" hidden>
+        <div id="profile-create-fields" class="profile-create-fields" hidden>
+          <div class="profile-create-identity">
+            <div id="new-profile-avatar-preview" class="profile-avatar-preview">+</div>
+            <div class="profile-avatar-copy">
+              <b>Profile picture</b>
+              <span>Optional · PNG, JPG, WebP or GIF · up to 50 MB</span>
+              <label class="profile-avatar-upload">Choose image<input id="new-profile-avatar" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label>
+            </div>
+          </div>
+          <label class="profile-name-field" for="new-profile-name">Profile name<input id="new-profile-name" maxlength="40" autocomplete="off" placeholder="e.g. Frosty" required></label>
+        </div>
+        <label id="vault-passcode-label" for="vault-passcode">Master passcode</label>
+        <div class="passcode-control"><input id="vault-passcode" name="passcode" type="password" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" autocomplete="current-password" required><button id="vault-passcode-reveal" class="passcode-reveal" type="button" aria-label="Hold to reveal master passcode" title="Hold to reveal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/></svg></button></div>
+        <label id="vault-confirm-label" for="vault-confirm" hidden>Confirm passcode</label>
+        <div id="vault-confirm-control" class="passcode-control" hidden><input id="vault-confirm" name="confirmation" type="password" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" autocomplete="new-password"><button id="vault-confirm-reveal" class="passcode-reveal" type="button" aria-label="Hold to reveal confirmation code" title="Hold to reveal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/></svg></button></div>
+        <p id="vault-passcode-warning" class="vault-warning">Six digits are easy to guess. Use a unique code, protect your Windows account, and keep an encrypted backup.</p>
+        <button id="vault-gate-submit" class="button button-primary" type="submit">Unlock vault</button>
+        <button id="vault-restore-btn" class="button button-secondary" type="button">Restore encrypted backup</button>
+        <p id="vault-gate-status" class="form-status" role="status" aria-live="polite">Checking vault...</p>
+      </form>
+    </section>
+  </main>
+  <div class="app-shell" id="app-shell" hidden>
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark"><img src="../assets/frost-tracker.png" alt=""></div>
+        <div><div class="brand-name">FROST<span>TRACKER</span></div><div class="brand-sub">VALORANT COMPANION</div></div>
+      </div>
+      <div class="nav-label">WORKSPACE</div>
+      <button class="nav-item active" data-page="overview"><span>◫</span> Player Stats</button>
+      <button class="nav-item" data-page="matches"><span>▤</span> Match history</button>
+      <button class="nav-item" data-page="compare"><span>⇄</span> Performance</button>
+      <button class="nav-item" data-page="vault"><span>▣</span> Vault</button>
+      <div class="sidebar-bottom">
+        <div class="profile-mini"><div class="avatar" id="sidebar-profile-avatar">F</div><div><b id="sidebar-profile-name">Profile</b><small>PERSONAL VAULT</small></div><span class="online-dot"></span></div>
+        <button id="switch-profile-btn" class="nav-item" type="button"><span>↔</span> Switch profile</button>
+        <button class="nav-item" data-page="settings"><span>⚙</span> Settings</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div><div class="eyebrow">YOUR COMPETITIVE COMPANION</div><div class="page-heading" id="page-title">Player Stats</div></div>
+        <div class="top-actions">
+          <span class="demo-pill" id="data-mode-label"><i></i> NO PLAYER DATA</span>
+          <button class="icon-button lock-vault-button" id="lock-vault-btn" type="button" title="Lock vault" aria-label="Lock vault"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 1 1 8 0v3"></path><path d="M12 14v3"></path></svg></button>
+        </div>
+      </header>
+
+      <section id="overview-page" class="page active">
+        <form id="rank-lookup-form" class="panel rank-lookup-panel">
+          <label for="rank-riot-id">Search a Riot ID<input id="rank-riot-id" name="riotId" maxlength="97" autocomplete="off" aria-controls="recent-searches" aria-expanded="false" required placeholder="PlayerName#TAG"></label>
+          <button id="rank-submit" class="button button-secondary" type="submit">Search player</button>
+          <p id="rank-lookup-status" class="form-status" role="status" aria-live="polite">Enter a Riot ID; region and platform are detected automatically.</p>
+          <div id="recent-searches" class="recent-searches" hidden><span>RECENT SEARCHES</span><div id="recent-search-list" class="recent-search-list"></div></div>
+        </form>
+        <section class="panel overview-snapshot">
+          <div class="player-hero" id="player-hero">
+
+            <div class="player-identity">
+              <div class="player-card-avatar"><img id="player-card-avatar" alt="" hidden><span id="player-card-placeholder">FT</span></div>
+              <div class="player-identity-copy">
+                <span class="eyebrow">PLAYER PROFILE</span>
+                <div class="player-name-line">
+                  <h1 id="overview-heading">Search for a player</h1>
+                  <span class="player-tag" id="overview-tag"></span>
+                </div>
+                <p id="overview-subtitle">Enter a Riot ID above to load their competitive rank and recent matches.</p>
+              </div>
+            </div>
+            <div class="player-rank-strip">
+              <div class="player-current-rank">
+                <img id="current-rank-icon" alt="" hidden>
+                <span class="rank-icon-placeholder" id="current-rank-placeholder">◇</span>
+                <div><span>CURRENT RANK</span><b id="overview-current-rank">NO PLAYER LOADED</b><small><span id="overview-rr">—</span> RR <span id="overview-last-change" class="rank-change"></span></small></div>
+              </div>
+              <div class="player-peak-rank">
+                <img id="peak-rank-icon" alt="" hidden>
+                <span class="rank-icon-placeholder peak-rank-placeholder" id="peak-rank-placeholder">◇</span>
+                <div><span>PEAK RANK</span><b id="overview-peak-rank">—</b><small id="overview-peak-season">Highest recorded</small></div>
+              </div>
+            </div>
+            <div class="player-level" id="player-level">LEVEL —</div>
+          </div>
+          <div class="player-performance-heading">
+            <div><h2>Performance</h2><p id="overview-snapshot-caption">Search for a player to calculate recent performance.</p></div>
+            <label class="performance-scope-control">CALCULATE BY
+              <select id="analytics-scope" class="filter-select" aria-label="Performance calculation period">
+                <option value="10matches">Last 10 matches</option>
+                <option value="20matches">Last 20 matches</option>
+                <option value="30matches">Last 30 matches</option>
+              </select>
+            </label>
+          </div>
+          <div class="performance-primary-grid">
+            <article class="performance-primary-card performance-win-card">
+              <div class="performance-card-label">WIN RATE</div>
+              <div class="performance-win-content">
+                <div class="winrate-ring" id="winrate-ring" role="img" aria-label="Win rate unavailable">
+                  <div class="winrate-ring-center"><b id="snapshot-win-rate">—</b><span>WIN RATE</span></div>
+                </div>
+                <div class="record-counts"><b id="snapshot-wins">— <span>WON</span></b><b id="snapshot-losses">— <span>LOST</span></b><small id="snapshot-draws">No draws</small></div>
+              </div>
+            </article>
+            <article class="performance-primary-card"><span class="performance-card-label">K/D RATIO</span><b class="performance-card-value" id="snapshot-kd">—</b><span class="performance-card-foot">Kills / deaths</span></article>
+            <article class="performance-primary-card"><span class="performance-card-label">AVERAGE COMBAT SCORE</span><b class="performance-card-value" id="snapshot-acs">—</b><span class="performance-card-foot">Per round</span></article>
+            <article class="performance-primary-card"><span class="performance-card-label">HEADSHOT</span><b class="performance-card-value" id="snapshot-headshots">—</b><span class="performance-card-foot">Of shots hit</span></article>
+          </div>
+          <div class="performance-secondary-grid">
+            <div class="performance-secondary-stat"><span>KAD RATIO</span><b id="snapshot-kad">—</b></div>
+            <div class="performance-secondary-stat"><span>WINS</span><b id="snapshot-wins-total">—</b></div>
+            <div class="performance-secondary-stat"><span>KILLS</span><b id="snapshot-kills">—</b></div>
+            <div class="performance-secondary-stat"><span>DEATHS</span><b id="snapshot-deaths">—</b></div>
+            <div class="performance-secondary-stat"><span>ASSISTS</span><b id="snapshot-assists">—</b></div>
+            <div class="performance-secondary-stat"><span>DDA / ROUND</span><b id="snapshot-dda">—</b></div>
+          </div>
+          <div class="most-played-heading"><h3>Most played</h3><span id="snapshot-record">—</span></div>
+          <div class="agent-showcase" id="agent-showcase"></div>
+          <div id="agent-stats-empty" class="agent-showcase-empty">Search a player to see their most-played agents.</div>
+        </section>
+
+        <div class="overview-breakdowns">
+          <section class="panel breakdown-panel">
+            <div class="panel-head"><div><h2>Accuracy</h2><p>Hit distribution from recent matches</p></div></div>
+            <div class="accuracy-breakdown" id="accuracy-breakdown"></div>
+            <p id="accuracy-empty" class="breakdown-empty">Search a player to see hit accuracy.</p>
+          </section>
+          <section class="panel breakdown-panel role-breakdown-panel">
+            <div class="panel-head"><div><h2>Roles</h2><p>Agent-role performance from recent matches</p></div></div>
+            <div class="breakdown-table-wrap"><table class="breakdown-table"><thead><tr><th>ROLE</th><th>MATCHES</th><th>WIN %</th><th>K/D</th><th>ACS</th></tr></thead><tbody id="role-stats-table"></tbody></table></div>
+            <p id="role-stats-empty" class="breakdown-empty">Role details are not available for these matches.</p>
+          </section>
+        </div>
+
+        <div class="content-grid">
+          <section class="panel recent-panel">
+            <div class="panel-head"><div><h2>Recent matches</h2><p id="overview-matches-caption">Search for a player to load their latest matches.</p></div><button class="text-button" data-goto="matches">View all ↗</button></div>
+            <div class="match-list" id="recent-matches"></div>
+          </section>
+        </div>
+        <div class="notice"><span>ⓘ</span><div><b>Data sources</b><p>Rank and up to 30 recent matches across modes are fetched from HenrikDev. Performance can be calculated from the last 10, 20, or 30 loaded matches. Rank emblems, agent portraits, and player-card artwork use public VALORANT API assets. Unavailable weapon, KAST, or teammate stats are not estimated.</p></div></div>
+      </section>
+
+      <section id="matches-page" class="page">
+        <div class="section-intro matches-intro"><div><h1>Recent Matches</h1><p id="matches-caption">Search a Riot ID on Player Stats to load their recent matches.</p></div></div>
+        <div class="panel match-filters" aria-label="Filter matches">
+          <label>RESULT<select class="filter-select" id="match-filter"><option value="all">All results</option><option value="win">Wins</option><option value="loss">Losses</option><option value="draw">Draws</option></select></label>
+          <label>MODE<select class="filter-select" id="match-mode-filter"><option value="all">All modes</option></select></label>
+          <label>MAP<select class="filter-select" id="match-map-filter"><option value="all">All maps</option></select></label>
+          <label>AGENT<select class="filter-select" id="match-agent-filter"><option value="all">All agents</option></select></label>
+          <label>DATE RANGE<select class="filter-select" id="match-date-filter"><option value="all">All dates</option><option value="5">Last 5 matches</option><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option></select></label>
+          <label>MIN. KILLS<select class="filter-select" id="match-kills-filter"><option value="0">All kills</option><option value="10">10+ kills</option><option value="20">20+ kills</option><option value="30">30+ kills</option></select></label>
+        </div>
+        <div class="panel table-panel">
+          <div id="matches-status" class="matches-status" role="status" aria-live="polite">No player selected.</div>
+          <div class="table-wrap"><table><thead><tr><th>RESULT</th><th>MODE</th><th>MAP</th><th>AGENT</th><th>SCORE</th><th>K / D / A</th><th>ACS</th><th>HS%</th></tr></thead><tbody id="match-table"></tbody></table></div>
+          <div class="match-pagination">
+            <label>SHOW
+              <select id="match-page-size" class="filter-select" aria-label="Matches per page">
+                <option value="10" selected>10 matches</option>
+                <option value="20">20 matches</option>
+                <option value="30">30 matches</option>
+              </select>
+            </label>
+            <div class="match-pagination-controls">
+              <button id="match-page-prev" class="button button-secondary" type="button">Previous</button>
+              <span id="match-page-label" aria-live="polite">Page 1 of 1</span>
+              <button id="match-page-next" class="button button-secondary" type="button">Next</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="compare-page" class="page">
+        <div class="section-intro"><div><h1>Performance</h1><p>Based on the selected period of the searched player's match history.</p></div><span class="muted-tag" id="performance-match-count">NO MATCH DATA</span></div>
+        <div class="stat-grid">
+          <article class="stat-card"><div class="stat-top"><span>BEST MAP</span></div><div class="stat-value text-value" id="performance-best-map">—</div><div class="stat-foot" id="performance-best-map-foot">Search a player to load performance.</div></article>
+          <article class="stat-card"><div class="stat-top"><span>TOP AGENT</span></div><div class="stat-value text-value" id="performance-top-agent">—</div><div class="stat-foot" id="performance-top-agent-foot">Search a player to load performance.</div></article>
+          <article class="stat-card"><div class="stat-top"><span>BEST ACS</span></div><div class="stat-value" id="performance-best-acs">—</div><div class="stat-foot" id="performance-best-acs-foot">Search a player to load performance.</div></article>
+          <article class="stat-card"><div class="stat-top"><span>BEST HS%</span></div><div class="stat-value" id="performance-best-hs">—</div><div class="stat-foot" id="performance-best-hs-foot">Search a player to load performance.</div></article>
+        </div>
+        <div class="panel chart-panel"><div class="panel-head"><div><h2>Recent match impact</h2><p>Actual ACS from available recent matches · up to 8 matches</p></div></div><div class="chart" id="acs-chart"></div><div class="chart-labels"><span>Oldest available</span><span>Most recent</span></div></div>
+      </section>
+
+      <section id="settings-page" class="page">
+        <div class="section-intro"><div><h1>Settings</h1><p>Configure your Frost Tracker experience.</p></div></div>
+        <div class="panel settings-panel"><h2>HenrikDev API</h2><p class="setting-help">Use an API key from the HenrikDev dashboard. It is encrypted with Windows secure storage and sent only by the app process.</p><form id="api-key-form" class="api-key-form"><label for="henrikdev-api-key">API key</label><div><input id="henrikdev-api-key" type="password" autocomplete="new-password" spellcheck="false" placeholder="Paste your HenrikDev API key"><button class="button button-secondary" type="submit">Save key</button><button id="remove-api-key" class="text-button" type="button">Remove</button></div></form><p id="api-key-status" class="form-status" role="status" aria-live="polite">Checking secure storage...</p></div>
+        <div class="panel settings-panel"><h2>Application</h2><div class="setting-row"><div><b>Application version</b><p>Beta build</p></div><span id="version">0.93.3 (Beta)</span></div><div class="setting-row"><div><b>Data source</b><p>Rank, match history, and Performance analytics are based on HenrikDev data for the searched player.</p></div><span class="muted-tag">LIVE DATA</span></div><div class="setting-row"><div><b>Riot account connection</b><p>Open &amp; Fill can switch accounts, fill sign-in fields, and submit. Complete 2FA manually.</p></div><span class="muted-tag">2FA MANUAL</span></div><div class="setting-row"><div><b>Privacy</b><p>Vault entries are encrypted locally and require your master passcode.</p></div><span class="muted-tag">LOCAL</span></div></div>
+        <div class="panel settings-panel theme-settings-panel"><h2>Theme</h2><p class="setting-help">Choose the color style used throughout Frost Tracker.</p><div class="setting-row theme-setting-row"><div><b>App appearance</b><p>Your theme is saved on this device.</p></div><select id="app-theme-setting" class="filter-select" aria-label="App theme"><option value="midnight-purple">Midnight Purple</option><option value="midnight-blue">Midnight Blue</option><option value="maroon">Maroon</option><option value="forest">Forest</option><option value="lilac">Lilac</option><option value="frost">Frost</option><option value="white">White</option><option value="black">Black</option><option value="custom">Custom theme</option></select></div><div id="custom-theme-controls" class="custom-theme-controls" hidden><div><b id="custom-theme-name">Choose a theme image</b><span>Colors are sampled on this device. Your wallpaper stays on this device.</span></div><label class="button button-secondary custom-theme-pick" for="custom-theme-image">Choose image<input id="custom-theme-image" type="file" accept=".png,.jpg,.jpeg,.webp,.svg,.heic,image/png,image/jpeg,image/webp,image/svg+xml,image/heic"></label><button id="clear-custom-theme" class="button custom-theme-clear" type="button" hidden>Clear</button></div><div id="custom-theme-wallpaper-controls" class="custom-theme-wallpaper-controls" hidden><label for="custom-theme-wallpaper-opacity">Wallpaper opacity</label><input id="custom-theme-wallpaper-opacity" type="range" min="0" max="100" step="1" value="100" aria-describedby="custom-theme-wallpaper-opacity-value"><output id="custom-theme-wallpaper-opacity-value" for="custom-theme-wallpaper-opacity">100%</output></div><p id="custom-theme-status" class="form-status" role="status" aria-live="polite"></p></div>
+        <div class="panel settings-panel personal-profile-panel"><h2>Personal profile</h2><p class="setting-help">Manage the name and picture shown for this vault. Profile pictures can be up to 50 MB.</p><div class="profile-settings-summary"><img id="current-profile-avatar-preview" class="profile-settings-preview" alt="Current profile picture"><div><b id="profile-settings-display-name">Your profile</b><span>Private vault profile</span></div><i aria-hidden="true"></i></div><form id="profile-settings-form" class="profile-settings-form"><label>Profile name<input id="current-profile-name" maxlength="40" required></label><label>Profile picture<input id="current-profile-avatar-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label><div class="profile-settings-actions"><button class="button button-secondary" type="submit">Save changes</button><button id="delete-current-profile" class="button profile-delete-button" type="button">Delete profile</button></div></form><p id="profile-settings-status" class="form-status" role="status" aria-live="polite"></p></div>
+        <div class="panel settings-panel"><h2>Security</h2><div class="setting-row"><div><b>Lock after inactivity</b><p>Automatically clear unlocked vault data after no input.</p></div><select id="vault-auto-lock-setting" class="filter-select"><option value="0">When app closes</option><option value="5">5 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option></select></div><div class="setting-row"><div><b>Master passcode</b><p>Change the six-digit vault passcode. Existing entries will be re-encrypted.</p></div><button id="change-vault-passcode-btn" class="button button-secondary" type="button">Reset master passcode</button></div><p id="security-settings-status" class="form-status" role="status" aria-live="polite"></p></div>
+      </section>
+
+      <dialog id="change-vault-passcode-dialog" class="vault-dialog"><form id="change-vault-passcode-form"><div class="vault-dialog-head"><h2>Change master passcode</h2><button id="cancel-passcode-change" class="icon-button" type="button" title="Close" aria-label="Close">×</button></div><label>Current passcode<input id="current-vault-passcode" name="currentPasscode" type="password" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9A-Za-z]{6}" autocomplete="current-password" required></label><label>New six-digit passcode<input id="new-vault-passcode" name="newPasscode" type="password" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" autocomplete="new-password" required></label><label>Confirm new passcode<input id="confirm-vault-passcode" name="confirmation" type="password" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" autocomplete="new-password" required></label><p class="vault-warning">Your current passcode is required. All saved accounts are re-encrypted with the new code.</p><p id="passcode-change-status" class="form-status" role="status" aria-live="polite"></p><button class="button button-secondary" type="submit">Save new passcode</button></form></dialog>
+
+      <section id="vault-page" class="page">
+        <div class="section-intro"><div><h1>Personal Vault</h1><p>Encrypted account details, stored on this device.</p></div></div>
+        <div class="vault-workspace">
+          <section id="vault-account-list-panel" class="panel vault-account-list-panel">
+            <div class="vault-account-list-head"><div><h2>All accounts</h2><p>Saved on this device</p></div><button id="add-vault-entry-btn" class="button button-primary vault-new-button" type="button"><span>+</span> New</button></div>
+            <label class="vault-search-wrap"><span aria-hidden="true">⌕</span><input id="vault-account-search" class="vault-account-search" type="search" placeholder="Search accounts" aria-label="Search accounts"><span class="vault-search-shortcut">⌕</span></label>
+            <div class="vault-list-meta"><span id="vault-entry-count" class="muted-tag">0 ITEMS</span><span>Most recent</span></div>
+            <div id="vault-entry-list" class="vault-entry-list"></div>
+            <div class="vault-export-footer"><div><b>Encrypted backup</b><span>Keep a passcode-protected copy of this vault.</span></div><button id="vault-export-btn" class="button button-secondary vault-export-button" type="button">Export backup</button></div>
+          </section>
+          <section id="vault-account-detail" class="panel vault-account-detail" hidden><div class="vault-detail-head"><div id="vault-detail-service-mark" class="service-mark">R</div><div><h2 id="vault-detail-label"></h2><p>Saved account</p></div><span class="vault-saved-badge"><i></i> Saved</span></div><div class="vault-detail-fields"><div><span>USERNAME</span><b id="vault-detail-username"></b><button id="copy-vault-username" class="icon-button" type="button" title="Copy username" aria-label="Copy username">⧉</button></div><div><span>PASSWORD</span><b id="vault-detail-password">••••••••</b><button id="reveal-vault-detail-password" class="icon-button" type="button" title="Reveal for 15 seconds" aria-label="Reveal password">◉</button><button id="copy-vault-detail-password" class="icon-button" type="button" title="Copy password" aria-label="Copy password">⧉</button></div><p id="vault-detail-notes"></p></div><div class="vault-detail-actions"><button id="open-riot-client" class="button button-primary" type="button">Open &amp; fill Riot Client</button><button id="delete-vault-account" class="text-button danger" type="button">Delete account</button></div><p id="vault-entry-status" class="form-status" role="status" aria-live="polite"></p></section>
+          <section id="vault-empty-detail" class="panel vault-empty-detail"><h2>Select an account</h2><p>Choose an account from the list or add a new one.</p></section>
+        </div>
+        <dialog id="vault-entry-dialog" class="vault-dialog"><form id="vault-entry-form" class="vault-entry-form"><div class="vault-dialog-head"><h2>Add account</h2><button id="vault-cancel-entry" class="icon-button" type="button" title="Close" aria-label="Close">×</button></div><label>Account label<input name="label" maxlength="80" autocomplete="off" required placeholder="Riot Games"></label><label>Username or email<input name="username" maxlength="256" autocomplete="off" required></label><label>Password<input name="password" type="password" maxlength="4096" autocomplete="new-password" required></label><label>Notes<textarea name="notes" maxlength="2000" rows="3" placeholder="Optional account notes"></textarea></label><p id="vault-dialog-status" class="form-status" role="status" aria-live="polite"></p><button class="button button-secondary" type="submit">Save encrypted account</button></form></dialog>
+        <div class="notice"><span>ⓘ</span><div><b>Local vault only</b><p>Open &amp; Fill may sign out an existing session when Riot exposes a named logout control, populate sign-in fields, select Stay signed in, and submit. Complete any 2FA manually. The vault does not sync to Google.</p></div></div>
+      </section>
+
+      <footer class="footer"><span>FROST TRACKER <b id="footer-version">v0.93.3 (Beta)</b></span><span>UNOFFICIAL COMMUNITY COMPANION · NOT AFFILIATED WITH RIOT GAMES</span></footer>
+    </main>
+  </div>
+  <dialog id="update-available-dialog" class="vault-dialog update-dialog" aria-labelledby="update-available-title">
+    <div class="update-dialog-content">
+      <div class="update-dialog-brand"><img src="../assets/frost-tracker.png" alt=""><span>FROST TRACKER UPDATE</span></div>
+      <h2 id="update-available-title">Update is here</h2>
+      <p id="update-available-description">A new version is ready. Update now or come back to it later.</p>
+      <div class="update-dialog-actions">
+        <button id="update-later-button" class="button button-secondary" type="button">Update later</button>
+        <button id="update-now-button" class="button button-primary" type="button">Update now</button>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="update-progress-dialog" class="vault-dialog update-dialog update-progress-dialog" aria-labelledby="update-progress-title">
+    <div class="update-dialog-content">
+      <div class="update-dialog-brand"><img src="../assets/frost-tracker.png" alt=""><span>FROST TRACKER UPDATE</span></div>
+      <h2 id="update-progress-title">Downloading update</h2>
+      <p id="update-progress-message" aria-live="polite">Preparing your update...</p>
+      <div id="update-progress-track" class="update-progress-track" role="progressbar" aria-label="Update download progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <span id="update-progress-fill"></span>
+      </div>
+      <div class="update-progress-stats"><span id="update-progress-downloaded">0 MB downloaded</span><span id="update-progress-total">of -- MB</span></div>
+      <button id="update-progress-close" class="button button-secondary" type="button" hidden>Back to update options</button>
+    </div>
+  </dialog>
+  <dialog id="whats-new-dialog" class="vault-dialog update-dialog whats-new-dialog" aria-labelledby="whats-new-title">
+    <div class="update-dialog-content">
+      <div class="whats-new-heading">
+        <div>
+          <div class="update-dialog-brand"><img src="../assets/frost-tracker.png" alt=""><span>FROST TRACKER · v0.93.3</span></div>
+          <h2 id="whats-new-title">What’s new</h2>
+        </div>
+        <button id="whats-new-close" class="icon-button whats-new-close" type="button" aria-label="Close release notes" title="Close">×</button>
+      </div>
+      <p class="whats-new-intro">A few improvements are ready for you.</p>
+      <ol id="whats-new-list" class="whats-new-list"></ol>
+    </div>
+  </dialog>
+  <script src="../node_modules/heic2any/dist/heic2any.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

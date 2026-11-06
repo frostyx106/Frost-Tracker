@@ -1,0 +1,57 @@
+{
+  "name": "frost-tracker",
+  "version": "0.93.5",
+  "description": "Frost Tracker - VALORANT companion desktop beta",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "dist": "electron-builder --win nsis",
+    "release": "electron-builder --win nsis --publish always"
+  },
+  "build": {
+    "appId": "com.electron.frost-tracker",
+    "artifactName": "frost-tracker-Setup-${version}.${ext}",
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "assets/**/*",
+      "node_modules/heic2any/**/*",
+      "package.json"
+    ],
+    "win": {
+      "icon": "assets/frost-tracker.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "frostyx106",
+        "repo": "Frost-Tracker",
+        "releaseType": "release"
+      }
+    ],
+    "extraResources": [
+      {
+        "from": "scripts/fill-riot-login.ps1",
+        "to": "scripts/fill-riot-login.ps1"
+      }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^36.3.1",
+    "electron-builder": "^26.18.0"
+  },
+  "allowScripts": {
+    "electron@36.9.5": true,
+    "electron-winstaller@5.4.0": true
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11",
+    "heic2any": "^0.0.4"
+  }
+}
