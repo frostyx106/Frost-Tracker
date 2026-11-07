@@ -1,0 +1,32 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Frost Tracker",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", "${workspaceFolder}/.vscode/run.ps1"
+      ],
+      "group": { "kind": "build", "isDefault": true },
+      "isBackground": false,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true }
+    },
+    {
+      "label": "Ensure Electron binary",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", "${workspaceFolder}/.vscode/run.ps1",
+        "-PrepareOnly"
+      ],
+      "problemMatcher": [],
+      "presentation": { "reveal": "silent", "panel": "shared" }
+    }
+  ]
+}

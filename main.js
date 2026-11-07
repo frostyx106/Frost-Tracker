@@ -807,6 +807,26 @@ async function getHenrikDevApiKey() {
   }
 }
 
+const henrikLogPath = () => path.join(app.getPath("userData"), "henrikdev.log");
+
+function maskApiKey(apiKey) {
+  if (typeof apiKey !== "string" || !apiKey) return "(none)";
+  return apiKey.length <= 8 ? `${apiKey.length} chars` : `${apiKey.slice(0, 4)}…${apiKey.slice(-2)} (${apiKey.length} chars)`;
+}
+
+async function logHenrikDev(message) {
+  const line = `[${new Date().toISOString()}] ${message}`;
+  console.log(`[HenrikDev] ${message}`);
+  try {
+    const logPath = henrikLogPath();
+    const stats = await fs.stat(logPath).catch(() => null);
+    if (stats && stats.size > 1024 * 1024) await fs.rm(logPath, { force: true });
+    await fs.appendFile(logPath, `${line}\n`, "utf8");
+  } catch (error) {
+    console.warn("Could not write HenrikDev log.", error);
+  }
+}
+
 async function fetchHenrikDevData(url, apiKey, notFoundMessage) {
   const request = henrikRequestQueue.then(async () => {
     const waitMs = Math.max(
@@ -817,11 +837,24 @@ async function fetchHenrikDevData(url, apiKey, notFoundMessage) {
     if (waitMs) await new Promise(resolve => setTimeout(resolve, waitMs));
     lastHenrikRequestAt = Date.now();
 
-    const response = await fetch(url, {
-      headers: { Authorization: apiKey, Accept: "application/json" },
-      signal: AbortSignal.timeout(15000)
-    });
-    const payload = await response.json().catch(() => null);
+    const startedAt = Date.now();
+    let response;
+    try {
+      response = await fetch(url, {
+        headers: { Authorization: apiKey, Accept: "application/json" },
+        signal: AbortSignal.timeout(15000)
+      });
+    } catch (error) {
+      const cause = error?.cause?.code || error?.cause?.message || "";
+      await logHenrikDev(`NETWORK ERROR ${String(url)} after ${Date.now() - startedAt}ms: ${error?.name || "Error"}: ${error?.message || error}${cause ? ` (cause: ${cause})` : ""} key=${maskApiKey(apiKey)}`);
+      throw new Error(error?.name === "TimeoutError"
+        ? "HenrikDev did not respond within 15 seconds."
+        : `Could not reach HenrikDev: ${error?.message || "network error"}${cause ? ` (${cause})` : ""}.`);
+    }
+    const rawBody = await response.text().catch(() => "");
+    let payload = null;
+    try { payload = rawBody ? JSON.parse(rawBody) : null; } catch { payload = null; }
+    await logHenrikDev(`${response.status} ${response.statusText} ${String(url)} (${Date.now() - startedAt}ms) key=${maskApiKey(apiKey)}${response.ok ? "" : ` body=${rawBody.slice(0, 2000)}`}`);
 
     if (!response.ok) {
       const retryAfter = response.headers.get("retry-after");
@@ -845,7 +878,11 @@ async function fetchHenrikDevData(url, apiKey, notFoundMessage) {
         404: notFoundMessage,
         429: `HenrikDev rate limit reached.${waitDescription}`
       };
-      throw new Error(messages[response.status] || payload?.errors?.[0]?.message || "HenrikDev could not retrieve this player's data.");
+      const apiError = payload?.errors?.[0];
+      const apiMessage = apiError?.message || apiError?.details || payload?.message || payload?.error || "";
+      throw new Error(messages[response.status] ||
+        (apiMessage ? `HenrikDev error ${response.status}: ${apiMessage}` : "") ||
+        `HenrikDev could not retrieve this player's data (HTTP ${response.status}). See henrikdev.log in the app data folder.`);
     }
     return payload?.data;
   });
@@ -1039,6 +1076,7 @@ async function lookupPlayerData({ name, tag }) {
   }
 
   const apiKey = await getHenrikDevApiKey();
+  await logHenrikDev(`Lookup ${playerName}#${playerTag} — stored key ${maskApiKey(apiKey)}`);
   if (!apiKey) throw new Error("Add your HenrikDev API key in Settings first.");
 
   const encodedName = encodeURIComponent(playerName);
@@ -1050,6 +1088,7 @@ async function lookupPlayerData({ name, tag }) {
     ? account.platforms.map(platform => String(platform).toLowerCase())
     : [];
   const playerPlatform = platforms.includes("pc") ? "pc" : platforms.includes("console") ? "console" : "";
+  await logHenrikDev(`Account resolved: region=${region || "(none)"} platforms=${JSON.stringify(platforms)} -> using ${playerPlatform || "(none)"}`);
 
   if (!validAffinities.has(region) || !playerPlatform) {
     throw new Error("HenrikDev could not determine a supported region and platform for this account.");
@@ -1232,6 +1271,7 @@ app.whenReady().then(() => {
     try {
       return { ok: true, data: await lookupPlayerData(player) };
     } catch (error) {
+      await logHenrikDev(`Lookup FAILED: ${error?.stack || error?.message || error}`);
       return {
         ok: false,
         error: error instanceof Error ? error.message : "Player lookup failed."
