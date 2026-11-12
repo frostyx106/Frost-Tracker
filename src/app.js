@@ -1,6 +1,7 @@
 const recentSearchesKey = "frost-recent-riot-ids";
 const vaultAutoLockKey = "frost-vault-auto-lock-minutes";
 const appThemeKey = "frost-app-theme";
+const appAppearanceStyleKey = "frost-app-appearance-style";
 const whatsNewSeenVersionKey = "frost-whats-new-seen-version";
 const customThemeKey = "frost-custom-theme-palette";
 const customThemeWallpaperLevelKey = "frost-custom-theme-wallpaper-level";
@@ -22,6 +23,7 @@ let profilePickerEditing = false;
 let newProfileAvatar = null;
 let profileAvatarSelection = null;
 let vaultAutoLockTimer = null;
+let editingVaultEntryId = null;
 let customThemePalette = null;
 let customThemeImageUrl = null;
 let customThemeWallpaperLevel = 100;
@@ -58,6 +60,66 @@ $("window-titlebar").addEventListener("dblclick", event => {
   });
 });
 window.frost.onWindowMaximizedChange(updateMaximizeButton);
+
+const settingsTabs = [...document.querySelectorAll("[data-settings-tab]")];
+function selectSettingsTab(selectedTab, focus = false) {
+  for (const tab of settingsTabs) {
+    const isSelected = tab === selectedTab;
+    tab.classList.toggle("active", isSelected);
+    tab.setAttribute("aria-selected", String(isSelected));
+    tab.tabIndex = isSelected ? 0 : -1;
+    if (isSelected) {
+      const panel = document.getElementById(tab.getAttribute("aria-controls"));
+      for (const category of document.querySelectorAll("[data-settings-panel]")) {
+        category.hidden = category !== panel;
+      }
+    }
+  }
+  if (focus) selectedTab.focus();
+}
+
+for (const [index, tab] of settingsTabs.entries()) {
+  tab.addEventListener("click", () => selectSettingsTab(tab));
+  tab.addEventListener("keydown", event => {
+    let nextIndex;
+    if (event.key === "ArrowDown" || event.key === "ArrowRight") nextIndex = (index + 1) % settingsTabs.length;
+    else if (event.key === "ArrowUp" || event.key === "ArrowLeft") nextIndex = (index - 1 + settingsTabs.length) % settingsTabs.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = settingsTabs.length - 1;
+    else return;
+    event.preventDefault();
+    selectSettingsTab(settingsTabs[nextIndex], true);
+  });
+}
+
+window.frost.getStartupSetting().then(setting => {
+  const control = $("start-with-windows-setting");
+  control.checked = setting.enabled;
+  control.disabled = !setting.supported;
+  showStatus($("start-with-windows-status"), setting.supported
+    ? "When enabled, KEEPER starts in the tray when you sign in."
+    : "Starting with Windows is available only on Windows.", !setting.supported);
+}).catch(error => {
+  $("start-with-windows-setting").disabled = true;
+  showStatus($("start-with-windows-status"), error.message || "Could not read the Windows startup setting.", true);
+});
+
+$("start-with-windows-setting").addEventListener("change", async event => {
+  const control = event.currentTarget;
+  const requestedValue = control.checked;
+  control.disabled = true;
+  try {
+    control.checked = await window.frost.setStartupSetting(requestedValue);
+    showStatus($("start-with-windows-status"), control.checked
+      ? "KEEPER will start minimized to the tray when you sign in to Windows."
+      : "KEEPER will not start automatically with Windows.");
+  } catch (error) {
+    control.checked = !requestedValue;
+    showStatus($("start-with-windows-status"), error.message || "Could not update the Windows startup setting.", true);
+  } finally {
+    control.disabled = false;
+  }
+});
 
 function formatUpdateMegabytes(bytes) {
   return `${(Math.max(0, bytes) / (1024 * 1024)).toFixed(1)} MB`;
@@ -372,6 +434,14 @@ function applyAppTheme(theme) {
   applyCustomThemeWallpaper();
 }
 
+function applyAppAppearanceStyle(style) {
+  const selectedStyle = style === "glossy" ? "glossy" : "normal";
+  document.body.dataset.appearance = selectedStyle;
+  for (const button of document.querySelectorAll("[data-appearance-style]")) {
+    button.setAttribute("aria-pressed", String(button.dataset.appearanceStyle === selectedStyle));
+  }
+}
+
 try {
   customThemePalette = readCustomThemePalette();
   const savedWallpaperLevel = localStorage.getItem(customThemeWallpaperLevelKey);
@@ -382,9 +452,25 @@ try {
     }
   }
   applyAppTheme(localStorage.getItem(appThemeKey));
+  applyAppAppearanceStyle(localStorage.getItem(appAppearanceStyleKey));
 } catch (error) {
   applyAppTheme("midnight-purple");
+  applyAppAppearanceStyle("normal");
   console.error("Could not load the saved app theme.", error);
+}
+
+for (const button of document.querySelectorAll("[data-appearance-style]")) {
+  button.addEventListener("click", () => {
+    const style = button.dataset.appearanceStyle;
+    try {
+      localStorage.setItem(appAppearanceStyleKey, style);
+      applyAppAppearanceStyle(style);
+      showStatus($("appearance-style-status"), `${style === "glossy" ? "Glossy" : "Normal"} appearance applied across KEEPER.`);
+    } catch (error) {
+      showStatus($("appearance-style-status"), "Appearance changed, but the preference could not be saved.", true);
+      console.error("Could not save the app appearance style.", error);
+    }
+  });
 }
 
 loadCustomThemeImage().then(image => {
@@ -1315,6 +1401,8 @@ $("rank-lookup-form").addEventListener("submit", async event => {
   recentSearchOpen = false;
   $("recent-searches").hidden = true;
   submitButton.disabled = true;
+  submitButton.classList.add("is-loading");
+  submitButton.setAttribute("aria-busy", "true");
   clearPlayerData(riotId, "Loading player stats from HenrikDev...", true);
   showStatus($("rank-lookup-status"), "Looking up rank...");
 
@@ -1331,6 +1419,8 @@ $("rank-lookup-form").addEventListener("submit", async event => {
     showStatus($("rank-lookup-status"), message, true);
   } finally {
     submitButton.disabled = false;
+    submitButton.classList.remove("is-loading");
+    submitButton.removeAttribute("aria-busy");
   }
 });
 
@@ -1623,7 +1713,7 @@ async function enterUnlockedVault(result) {
 function getVaultAutoLockMinutes() {
   try {
     const minutes = Number(localStorage.getItem(vaultAutoLockKey) || 0);
-    return [0, 5, 15, 30].includes(minutes) ? minutes : 0;
+    return [0, 5, 15, 30, 60].includes(minutes) ? minutes : 0;
   } catch {
     return 0;
   }
@@ -1642,6 +1732,7 @@ function resetVaultAutoLockTimer() {
 
 async function lockVaultAndShowGate() {
   window.clearTimeout(vaultAutoLockTimer);
+  editingVaultEntryId = null;
   await window.frost.lockVault();
   $("vault-entry-list").replaceChildren();
   vaultEntries = [];
@@ -1880,9 +1971,10 @@ $("vault-auto-lock-setting").addEventListener("change", () => {
     return;
   }
   resetVaultAutoLockTimer();
-  showStatus($("security-settings-status"), $("vault-auto-lock-setting").value === "0"
-    ? "The vault will lock when the app closes or you lock it manually."
-    : `The vault will lock after ${$("vault-auto-lock-setting").value} minutes of inactivity.`);
+  const minutes = Number($("vault-auto-lock-setting").value);
+  showStatus($("security-settings-status"), minutes === 0
+    ? "The vault will not lock while idle. It is still locked when KEEPER exits or you lock it manually."
+    : `The vault will lock after ${minutes === 60 ? "1 hour" : `${minutes} minutes`} of inactivity.`);
 });
 
 for (const activityEvent of ["pointerdown", "pointermove", "wheel", "keydown", "input"]) {
@@ -1924,6 +2016,10 @@ $("change-vault-passcode-form").addEventListener("submit", async event => {
 });
 
 $("add-vault-entry-btn").addEventListener("click", () => {
+  editingVaultEntryId = null;
+  $("vault-entry-form").reset();
+  $("vault-entry-dialog-title").textContent = "Add account";
+  $("vault-entry-submit").textContent = "Save encrypted account";
   $("vault-dialog-status").textContent = "";
   $("vault-entry-dialog").showModal();
   $("vault-entry-form").elements.namedItem("label").focus();
@@ -1932,6 +2028,12 @@ $("add-vault-entry-btn").addEventListener("click", () => {
 $("vault-cancel-entry").addEventListener("click", () => {
   $("vault-entry-dialog").close();
   $("vault-entry-form").reset();
+  editingVaultEntryId = null;
+});
+
+$("vault-entry-dialog").addEventListener("close", () => {
+  $("vault-entry-form").reset();
+  editingVaultEntryId = null;
 });
 
 $("vault-entry-form").addEventListener("submit", async event => {
@@ -1940,21 +2042,59 @@ $("vault-entry-form").addEventListener("submit", async event => {
   const values = new FormData(form);
   const button = form.querySelector("button[type=submit]");
   button.disabled = true;
-  showStatus($("vault-dialog-status"), "Encrypting entry...");
+  showStatus($("vault-dialog-status"), editingVaultEntryId ? "Updating encrypted entry..." : "Encrypting entry...");
   try {
-    const entries = await window.frost.saveVaultEntry({
+    const entry = {
       label: values.get("label"),
       username: values.get("username"),
       password: values.get("password"),
       notes: values.get("notes")
-    });
+    };
+    const savedId = editingVaultEntryId;
+    const entries = savedId
+      ? await window.frost.updateVaultEntry(savedId, entry)
+      : await window.frost.saveVaultEntry(entry);
     form.reset();
     $("vault-entry-dialog").close();
-    selectedVaultEntryId = entries[0]?.id || null;
+    editingVaultEntryId = null;
+    selectedVaultEntryId = savedId || entries[0]?.id || null;
     renderVaultEntries(entries);
-    showStatus($("vault-entry-status"), "Entry encrypted and saved on this device.");
+    showStatus($("vault-entry-status"), savedId
+      ? "Account updated and encrypted on this device."
+      : "Entry encrypted and saved on this device.");
   } catch (error) {
     showStatus($("vault-dialog-status"), error.message || "The entry could not be saved.", true);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$("edit-vault-account").addEventListener("click", async event => {
+  const entry = vaultEntries.find(item => item.id === selectedVaultEntryId);
+  if (!entry) return;
+  const button = event.currentTarget;
+  button.disabled = true;
+  editingVaultEntryId = entry.id;
+  $("vault-entry-form").reset();
+  $("vault-entry-dialog-title").textContent = "Edit account";
+  $("vault-entry-submit").textContent = "Save changes";
+  $("vault-dialog-status").textContent = "";
+  $("vault-entry-form").elements.namedItem("label").value = entry.label;
+  $("vault-entry-form").elements.namedItem("username").value = entry.username;
+  $("vault-entry-form").elements.namedItem("notes").value = entry.notes || "";
+  $("vault-entry-form").elements.namedItem("password").value = "";
+  $("vault-entry-dialog").showModal();
+  showStatus($("vault-dialog-status"), "Loading saved password...");
+  try {
+    const password = await window.frost.revealVaultPassword(entry.id);
+    if (!$("vault-entry-dialog").open || editingVaultEntryId !== entry.id) return;
+    $("vault-entry-form").elements.namedItem("password").value = password;
+    $("vault-dialog-status").textContent = "";
+    $("vault-entry-form").elements.namedItem("label").focus();
+  } catch (error) {
+    $("vault-entry-dialog").close();
+    editingVaultEntryId = null;
+    showStatus($("vault-entry-status"), error.message || "Account could not be opened for editing.", true);
   } finally {
     button.disabled = false;
   }

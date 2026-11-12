@@ -1155,6 +1155,283 @@ body[data-theme-mode="light"] .update-dialog::backdrop {
   }
 }
 
+/* ── Settings workspace ────────────────────────────────────── */
+#settings-page .settings-layout {
+  display: grid;
+  grid-template-columns: 176px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 24px;
+  width: min(100%, 1100px);
+  min-height: 390px;
+}
+
+#settings-page > .section-intro {
+  display: none;
+}
+
+#settings-page .settings-nav {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  gap: 2px;
+  padding: 0 10px 0 0;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--theme-sidebar, var(--bg));
+  box-shadow: none;
+}
+
+#settings-page .settings-nav-heading {
+  display: grid;
+  gap: 6px;
+  margin: -5px 0 13px;
+  padding: 0 10px 12px 0;
+}
+
+#settings-page .settings-nav-heading h2 {
+  margin: 0;
+  color: var(--text);
+  font: 650 25px/1.2 var(--display);
+  letter-spacing: -.035em;
+}
+
+#settings-page .settings-nav-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+#settings-page .settings-tab {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 8px 12px 8px 14px;
+  border: 0;
+  border-right: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  cursor: pointer;
+  font: 500 12px var(--font);
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+}
+
+#settings-page .settings-tab:hover {
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  color: var(--text);
+}
+
+#settings-page .settings-tab.active {
+  border-right-color: var(--red);
+  color: var(--red);
+}
+
+#settings-page .settings-tab:focus-visible {
+  outline: 2px solid var(--theme-focus);
+  outline-offset: 2px;
+}
+
+#settings-page .settings-content,
+#settings-page .settings-category {
+  min-width: 0;
+}
+
+#settings-page .settings-category[hidden] {
+  display: none !important;
+}
+
+#settings-page .settings-panel {
+  max-width: none;
+  margin: 0 0 12px;
+  padding: 0;
+  overflow: hidden;
+  border-color: var(--line);
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--panel) 95%, #000);
+  box-shadow: none;
+}
+
+#settings-page .settings-panel > h2 {
+  margin: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  font-size: 13px;
+}
+
+#settings-page .settings-panel > .setting-help {
+  margin: 0;
+  padding: 14px 20px 2px;
+}
+
+#settings-page .settings-panel > .setting-row {
+  margin: 0 20px;
+  padding: 15px 0;
+}
+
+#settings-page .settings-panel > .setting-row:first-of-type {
+  border-top: 0;
+}
+
+#settings-page .settings-panel > .custom-theme-controls,
+#settings-page .settings-panel > .custom-theme-wallpaper-controls {
+  margin: 10px 20px;
+}
+
+#settings-page .settings-panel > .form-status {
+  margin: 8px 20px 14px;
+}
+
+#settings-page .settings-panel > .api-key-form {
+  margin: 14px 20px 0;
+}
+
+#settings-page .settings-panel > .profile-settings-summary,
+#settings-page .settings-panel > .profile-settings-form {
+  margin-right: 20px;
+  margin-left: 20px;
+}
+
+#settings-page .settings-panel > .profile-settings-form {
+  margin-bottom: 12px;
+}
+
+#settings-page .settings-switch {
+  position: relative;
+  display: inline-flex;
+  width: 42px;
+  height: 24px;
+  flex: 0 0 auto;
+  align-items: center;
+  cursor: pointer;
+}
+
+#settings-page .settings-switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+#settings-page .settings-switch span {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 32%, var(--panel));
+  transition: background var(--dur) var(--ease);
+}
+
+#settings-page .settings-switch span::after {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text);
+  content: "";
+  transition: transform var(--dur) var(--ease);
+}
+
+#settings-page .settings-switch input:checked + span {
+  background: var(--red);
+}
+
+#settings-page .settings-switch input:checked + span::after {
+  transform: translateX(18px);
+}
+
+#settings-page .settings-switch input:focus-visible + span {
+  outline: 2px solid var(--theme-focus);
+  outline-offset: 3px;
+}
+
+#settings-page .settings-switch input:disabled + span {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+#settings-page .appearance-style-control {
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg) 70%, var(--panel));
+}
+
+#settings-page .appearance-style-option {
+  min-width: 82px;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: 600 12px var(--font);
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+#settings-page .appearance-style-option[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--red) 35%, var(--line));
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+  color: var(--text);
+}
+
+#settings-page .appearance-style-option:focus-visible {
+  outline: 2px solid var(--theme-focus);
+  outline-offset: 2px;
+}
+
+#settings-page #appearance-style-status:empty {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  #settings-page .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  #settings-page > .section-intro {
+    display: flex;
+  }
+
+  #settings-page .settings-nav-heading {
+    display: none;
+  }
+
+  #settings-page .settings-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    align-items: center;
+    padding: 0 0 5px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  #settings-page .settings-tab {
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 6px 9px;
+    border-right: 0;
+    border-bottom: 2px solid transparent;
+  }
+
+  #settings-page .settings-tab.active {
+    border-bottom-color: var(--red);
+  }
+}
+
 /* ── Product-wide clarity pass ─────────────────────────────── */
 body {
   --r-xs: 7px;
@@ -2147,4 +2424,427 @@ body[data-theme="custom"][data-theme-mode="light"] .vault-detail-fields > div {
 body[data-theme="custom"][data-theme-mode="light"] .vault-detail-fields span,
 body[data-theme="custom"][data-theme-mode="light"] .vault-detail-fields b {
   color: var(--text);
+}
+
+/* ── Motion ────────────────────────────────────────────────── */
+@keyframes keeper-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes keeper-dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes keeper-bar-enter {
+  from {
+    opacity: .35;
+    transform: scaleY(.18);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes keeper-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.page.active {
+  animation: keeper-page-enter 220ms var(--ease) both;
+}
+
+.page.active .overview-snapshot,
+.page.active .breakdown-panel,
+.page.active .recent-panel,
+.page.active .table-panel,
+.page.active .chart-panel,
+.page.active .settings-panel,
+.page.active .vault-account-list-panel,
+.page.active .vault-account-detail,
+.page.active .vault-empty-detail {
+  animation: keeper-page-enter 280ms var(--ease) both;
+}
+
+.page.active .breakdown-panel:nth-child(2),
+.page.active .settings-panel:nth-of-type(3),
+.page.active .vault-account-detail,
+.page.active .vault-empty-detail {
+  animation-delay: 45ms;
+}
+
+.nav-item {
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease),
+    color var(--dur) var(--ease), box-shadow var(--dur) var(--ease),
+    transform var(--dur) var(--ease);
+}
+
+body[data-theme] .nav-item:active {
+  transform: scale(.98);
+}
+
+.stat-card,
+.performance-primary-card,
+.agent-showcase-item,
+.match-row,
+.vault-account-row {
+  transition: transform 180ms var(--ease), background-color 180ms var(--ease),
+    border-color 180ms var(--ease), box-shadow 180ms var(--ease);
+}
+
+.stat-card:hover,
+.performance-primary-card:hover,
+.agent-showcase-item:hover {
+  transform: translateY(-2px);
+}
+
+.vault-account-row:hover {
+  transform: translateX(2px);
+}
+
+body[data-theme] .performance-primary-card:hover,
+body[data-theme] .agent-showcase-item:hover {
+  transform: translateY(-2px);
+}
+
+body[data-theme] .vault-account-row:hover {
+  transform: translateX(2px);
+}
+
+.button:active,
+.icon-button:active,
+.window-control-button:active {
+  transform: translateY(1px) scale(.98);
+}
+
+.chart-bar {
+  transform-origin: bottom;
+  animation: keeper-bar-enter 360ms var(--ease) both;
+}
+
+.chart-bar:nth-child(2) { animation-delay: 35ms; }
+.chart-bar:nth-child(3) { animation-delay: 70ms; }
+.chart-bar:nth-child(4) { animation-delay: 105ms; }
+.chart-bar:nth-child(5) { animation-delay: 140ms; }
+.chart-bar:nth-child(6) { animation-delay: 175ms; }
+.chart-bar:nth-child(7) { animation-delay: 210ms; }
+.chart-bar:nth-child(8) { animation-delay: 245ms; }
+
+.accuracy-track i {
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: accuracy-fill 520ms var(--ease) 100ms both;
+}
+
+@keyframes accuracy-fill {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.winrate-ring {
+  animation: keeper-ring-enter 420ms var(--ease) both;
+}
+
+@keyframes keeper-ring-enter {
+  from {
+    opacity: .6;
+    transform: rotate(-90deg) scale(.88);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-90deg) scale(1);
+  }
+}
+
+dialog.vault-dialog[open] {
+  animation: keeper-dialog-enter 180ms var(--ease) both;
+}
+
+dialog.vault-dialog[open]::backdrop {
+  animation: keeper-backdrop-enter 180ms ease-out both;
+}
+
+@keyframes keeper-backdrop-enter {
+  from { background-color: transparent; }
+  to { background-color: rgba(0, 0, 0, .58); }
+}
+
+#rank-submit.is-loading {
+  position: relative;
+  padding-right: 38px;
+}
+
+#rank-submit.is-loading::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 13px;
+  width: 14px;
+  height: 14px;
+  margin: auto;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  content: "";
+  animation: keeper-spin 700ms linear infinite;
+}
+
+/* ── Logo, contrast, and typography clarity ─────────────────── */
+.brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 3px;
+  object-fit: contain;
+}
+
+.window-titlebar-icon {
+  padding: 2px;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 14.5px;
+  line-height: 1.55;
+  font-kerning: normal;
+  font-synthesis: none;
+}
+
+body :is(button, input, select, textarea) {
+  font-family: var(--font);
+}
+
+#settings-page .settings-tab {
+  min-height: 42px;
+  padding-inline: 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+#settings-page .settings-panel > h2 {
+  font-size: 14px;
+}
+
+#settings-page :is(.setting-help, .setting-row p) {
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+body[data-theme="custom"][data-theme-mode="dark"] #settings-page .settings-panel {
+  border-color: rgba(255, 255, 255, .13);
+  background: #101115;
+  color: #f5f6fa;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body[data-theme="custom"][data-theme-mode="dark"] #settings-page .settings-tab {
+  color: #c3c6d0;
+}
+
+body[data-theme="custom"][data-theme-mode="dark"] #settings-page .settings-tab.active {
+  color: #c9a8ff;
+}
+
+body[data-theme="custom"][data-theme-mode="light"] #settings-page .settings-panel {
+  border-color: #d7dbe3;
+  background: #f8f9fb;
+  color: #20232b;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body[data-theme="custom"][data-theme-mode="light"] #settings-page .settings-tab {
+  color: #505766;
+}
+
+body[data-theme="custom"][data-theme-mode="light"] #settings-page .settings-tab.active {
+  color: #6543a8;
+}
+
+/* ── Optional glossy surface treatment ─────────────────────── */
+body[data-appearance="glossy"] :is(
+  .panel,
+  .stat-card,
+  .rank-chip,
+  .vault-gate-panel,
+  .vault-account-list-panel,
+  .vault-account-detail,
+  .vault-empty-detail,
+  .vault-dialog,
+  .settings-nav,
+  .vault-export-footer,
+  .vault-detail-fields,
+  .notice,
+  .insight-box,
+  .profile-settings-summary,
+  .custom-theme-controls,
+  .custom-theme-wallpaper-controls
+) {
+  border-color: var(--glass-edge, color-mix(in srgb, var(--text) 20%, transparent));
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  box-shadow: inset 0 1px 0 var(--glass-shine, rgba(255, 255, 255, .1)),
+    0 14px 34px rgba(0, 0, 0, .18);
+  backdrop-filter: blur(16px) saturate(145%);
+  -webkit-backdrop-filter: blur(16px) saturate(145%);
+}
+
+body[data-appearance="glossy"] .settings-panel {
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+}
+
+body[data-appearance="glossy"] #settings-page .settings-panel {
+  border-color: var(--glass-edge, color-mix(in srgb, var(--text) 20%, transparent));
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  box-shadow: inset 0 1px 0 var(--glass-shine, rgba(255, 255, 255, .1)),
+    0 14px 34px rgba(0, 0, 0, .18);
+  backdrop-filter: blur(16px) saturate(145%);
+  -webkit-backdrop-filter: blur(16px) saturate(145%);
+}
+
+body[data-appearance="glossy"] :is(.sidebar, .topbar) {
+  border-color: var(--glass-edge, var(--line));
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  box-shadow: inset 0 1px 0 var(--glass-shine, rgba(255, 255, 255, .08));
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+}
+
+body[data-appearance="glossy"] :is(.button, .icon-button, .filter-select, input, textarea, select) {
+  border-color: var(--glass-edge, color-mix(in srgb, var(--text) 18%, transparent));
+  box-shadow: inset 0 1px 0 var(--glass-shine, rgba(255, 255, 255, .12)),
+    0 5px 16px rgba(0, 0, 0, .14);
+}
+
+body[data-appearance="glossy"][data-theme] :is(
+  .button,
+  .icon-button,
+  .filter-select,
+  input,
+  textarea,
+  select
+) {
+  box-shadow: inset 0 1px 0 var(--glass-shine, rgba(255, 255, 255, .12)),
+    0 5px 16px rgba(0, 0, 0, .14);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+}
+
+body[data-appearance="glossy"] :is(.button, .icon-button, .filter-select):hover {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2), 0 8px 20px rgba(0, 0, 0, .2);
+}
+
+body[data-appearance="glossy"] #settings-page .settings-nav {
+  padding: 14px 10px;
+  border: 1px solid var(--glass-edge, var(--line));
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  box-shadow: inset 0 1px 0 var(--glass-shine, rgba(255, 255, 255, .1)),
+    0 14px 34px rgba(0, 0, 0, .18);
+  backdrop-filter: blur(16px) saturate(145%);
+  -webkit-backdrop-filter: blur(16px) saturate(145%);
+}
+
+body[data-appearance="normal"] #settings-page .settings-nav {
+  padding: 0 10px 0 0;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--theme-sidebar, var(--bg));
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body[data-appearance="normal"] #settings-page .settings-tab {
+  border: 0;
+  border-right: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body[data-appearance="normal"] #settings-page .settings-tab:hover {
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+
+body[data-appearance="normal"] #settings-page .settings-tab.active {
+  border-right-color: var(--red);
+}
+
+body[data-appearance="glossy"] #settings-page .settings-panel > h2 {
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+
+body[data-appearance="glossy"] .vault-account-row,
+body[data-appearance="glossy"] .match-row {
+  background: color-mix(in srgb, var(--panel) 62%, transparent);
+}
+
+body[data-appearance="glossy"][data-theme="custom"][data-theme-mode="dark"] :is(
+  .panel,
+  .stat-card,
+  .rank-chip,
+  .vault-gate-panel,
+  .vault-account-list-panel,
+  .vault-account-detail,
+  .vault-empty-detail,
+  .vault-dialog,
+  .settings-nav,
+  .notice,
+  .insight-box,
+  .profile-settings-summary,
+  .custom-theme-controls,
+  .custom-theme-wallpaper-controls
+),
+body[data-appearance="glossy"][data-theme="custom"][data-theme-mode="dark"] #settings-page .settings-panel {
+  border-color: color-mix(in srgb, var(--custom-accent) 28%, rgba(255, 255, 255, .22));
+  background: color-mix(in srgb, #101115 78%, transparent);
+  backdrop-filter: blur(16px) saturate(145%);
+  -webkit-backdrop-filter: blur(16px) saturate(145%);
+}
+
+body[data-appearance="glossy"][data-theme="custom"][data-theme-mode="light"] :is(
+  .panel,
+  .stat-card,
+  .rank-chip,
+  .vault-gate-panel,
+  .vault-account-list-panel,
+  .vault-account-detail,
+  .vault-empty-detail,
+  .vault-dialog,
+  .settings-nav,
+  .notice,
+  .insight-box,
+  .profile-settings-summary,
+  .custom-theme-controls,
+  .custom-theme-wallpaper-controls
+),
+body[data-appearance="glossy"][data-theme="custom"][data-theme-mode="light"] #settings-page .settings-panel {
+  border-color: color-mix(in srgb, var(--custom-accent) 28%, #d7dbe3);
+  background: color-mix(in srgb, #f8f9fb 78%, transparent);
+  backdrop-filter: blur(16px) saturate(145%);
+  -webkit-backdrop-filter: blur(16px) saturate(145%);
 }

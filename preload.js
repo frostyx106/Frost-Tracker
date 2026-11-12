@@ -31,6 +31,8 @@ contextBridge.exposeInMainWorld("frost", {
     return () => ipcRenderer.removeListener("window-maximized-change", listener);
   },
   getVersion: () => ipcRenderer.invoke("app-version"),
+  getStartupSetting: () => ipcRenderer.invoke("startup-setting-read"),
+  setStartupSetting: (enabled) => ipcRenderer.invoke("startup-setting-write", enabled),
   getUpdateState: () => ipcRenderer.invoke("update-state-read"),
   getPendingWhatsNewVersion: () => ipcRenderer.invoke("update-state-get-pending-whats-new"),
   clearPendingWhatsNewVersion: () => ipcRenderer.invoke("update-state-clear-pending"),
@@ -56,6 +58,7 @@ contextBridge.exposeInMainWorld("frost", {
   lockVault: () => ipcRenderer.invoke("vault-lock"),
   listVaultEntries: () => ipcRenderer.invoke("vault-list"),
   saveVaultEntry: (entry) => ipcRenderer.invoke("vault-save-entry", entry),
+  updateVaultEntry: (id, entry) => ipcRenderer.invoke("vault-update-entry", id, entry),
   deleteVaultEntry: (id) => ipcRenderer.invoke("vault-delete-entry", id),
   revealVaultPassword: (id) => ipcRenderer.invoke("vault-reveal-password", id),
   copyVaultUsername: (id) => ipcRenderer.invoke("vault-copy-username", id),

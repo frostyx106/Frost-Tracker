@@ -383,7 +383,8 @@
   flex: 1 1 auto;
   gap: 4px;
   min-height: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .vault-export-footer {

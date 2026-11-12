@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, safeStorage, clipboard, dialog, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, safeStorage, clipboard, dialog, shell, Tray, Menu, nativeImage } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const fs = require("fs/promises");
 const { createCipheriv, createDecipheriv, randomBytes, randomUUID, scrypt } = require("crypto");
@@ -13,6 +13,37 @@ const maxProfileAvatarDataUrlLength = Math.ceil(maxProfileAvatarBytes / 3) * 4 +
 const maxCustomThemeImageBytes = 12 * 1024 * 1024;
 
 let mainWindow;
+let tray;
+let isQuitting = false;
+const launchInTray = process.argv.includes("--hidden");
+function getWindowsStartupSettings() {
+  const path = process.execPath;
+  const args = app.isPackaged
+    ? ["--hidden"]
+    : [`"${app.getAppPath()}"`, "--hidden"];
+  return { path, args };
+}
+
+function repairWindowsStartupEntry() {
+  const startupSettings = getWindowsStartupSettings();
+  const currentSettings = app.getLoginItemSettings();
+  if (!currentSettings.executableWillLaunchAtLogin ||
+      app.getLoginItemSettings(startupSettings).openAtLogin) {
+    return;
+  }
+
+  try {
+    app.setLoginItemSettings({
+      openAtLogin: true,
+      ...startupSettings
+    });
+    if (!app.getLoginItemSettings(startupSettings).openAtLogin) {
+      console.error("Could not repair the KEEPER Windows startup entry.");
+    }
+  } catch (error) {
+    console.error("Could not repair the KEEPER Windows startup entry.", error);
+  }
+}
 let unlockedVault = null;
 let failedVaultUnlocks = 0;
 let vaultLockedUntil = 0;
@@ -171,6 +202,7 @@ function createMainWindow() {
     height: 920,
     minWidth: 1120,
     minHeight: 720,
+    show: !launchInTray,
     frame: false,
     backgroundColor: "#090b10",
     icon: path.join(__dirname, "assets", "keeper.ico"),
@@ -185,6 +217,11 @@ function createMainWindow() {
   mainWindow.setMenu(null);
   mainWindow.on("maximize", () => mainWindow.webContents.send("window-maximized-change", true));
   mainWindow.on("unmaximize", () => mainWindow.webContents.send("window-maximized-change", false));
+  mainWindow.on("close", event => {
+    if (isQuitting) return;
+    event.preventDefault();
+    mainWindow.hide();
+  });
   mainWindow.loadFile(path.join(__dirname, "src", "index.html"));
 }
 
@@ -401,6 +438,37 @@ function listVaultEntries() {
   }));
 }
 
+function showMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createMainWindow();
+    return;
+  }
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function createSystemTray() {
+  if (tray) return;
+  const iconPath = path.join(__dirname, "assets", "keeper.png");
+  const icon = nativeImage.createFromPath(iconPath);
+  if (icon.isEmpty()) throw new Error(`Could not load the KEEPER tray icon at ${iconPath}.`);
+  tray = new Tray(icon.resize({ width: 16, height: 16 }));
+  tray.setToolTip("KEEPER");
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: "Open KEEPER", click: showMainWindow },
+    { type: "separator" },
+    {
+      label: "Quit",
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      }
+    }
+  ]));
+  tray.on("double-click", showMainWindow);
+}
+
 async function persistVault() {
   const vault = requireUnlockedVault();
   const iv = randomBytes(12);
@@ -582,6 +650,37 @@ async function saveVaultEntry(entry) {
     await persistVault();
   } catch (error) {
     vault.entries = vault.entries.filter(entry => entry.id !== savedEntry.id);
+    throw error;
+  }
+  return listVaultEntries();
+}
+
+async function updateVaultEntry(id, entry) {
+  const vault = requireUnlockedVault();
+  if (typeof id !== "string") throw new Error("Select a valid vault item.");
+  if (!entry || typeof entry !== "object") throw new Error("Enter a valid vault item.");
+  const index = vault.entries.findIndex(item => item.id === id);
+  if (index < 0) throw new Error("Vault item not found.");
+  const label = typeof entry.label === "string" ? entry.label.trim() : "";
+  const username = typeof entry.username === "string" ? entry.username.trim() : "";
+  const password = typeof entry.password === "string" ? entry.password : "";
+  const notes = typeof entry.notes === "string" ? entry.notes.trim() : "";
+  if (!label || label.length > 80 || !username || username.length > 256 || !password || password.length > 4096 || notes.length > 2000) {
+    throw new Error("Enter a label, username, and password. Notes must be under 2,000 characters.");
+  }
+  const previousEntry = vault.entries[index];
+  vault.entries[index] = {
+    id,
+    label,
+    username,
+    password,
+    notes,
+    updatedAt: new Date().toISOString()
+  };
+  try {
+    await persistVault();
+  } catch (error) {
+    vault.entries[index] = previousEntry;
     throw error;
   }
   return listVaultEntries();
@@ -1206,23 +1305,17 @@ if (!gotSingleInstanceLock) {
   app.quit();
 } else {
   app.on("second-instance", () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.show();
-      mainWindow.focus();
-    }
+    showMainWindow();
   });
 }
 
 app.on("activate", () => {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.show();
-    mainWindow.focus();
-  }
+  showMainWindow();
 });
 
 app.whenReady().then(() => {
+  if (process.platform === "win32") repairWindowsStartupEntry();
+  createSystemTray();
   createMainWindow();
   configureAutoUpdates();
   ipcMain.handle("window-control", (event, action) => {
@@ -1271,6 +1364,28 @@ app.whenReady().then(() => {
     return true;
   });
   ipcMain.handle("app-version", () => app.getVersion());
+  ipcMain.handle("startup-setting-read", () => {
+    if (process.platform !== "win32") return { supported: false, enabled: false };
+    const startupSettings = getWindowsStartupSettings();
+    return {
+      supported: true,
+      enabled: app.getLoginItemSettings(startupSettings).openAtLogin
+    };
+  });
+  ipcMain.handle("startup-setting-write", (_event, enabled) => {
+    if (process.platform !== "win32") throw new Error("Starting with Windows is available only on Windows.");
+    if (typeof enabled !== "boolean") throw new Error("Choose whether KEEPER should start with Windows.");
+    const startupSettings = getWindowsStartupSettings();
+    app.setLoginItemSettings({
+      openAtLogin: enabled,
+      ...startupSettings
+    });
+    const isEnabled = app.getLoginItemSettings(startupSettings).openAtLogin;
+    if (isEnabled !== enabled) {
+      throw new Error("Windows did not save the startup setting. Try running KEEPER as your Windows user and check startup-app permissions.");
+    }
+    return isEnabled;
+  });
   ipcMain.handle("update-state-read", () => readUpdateState());
   ipcMain.handle("update-state-clear-pending", () => clearPendingWhatsNewVersion());
   ipcMain.handle("update-state-mark-whats-new-shown", (_event, version) => markWhatsNewShown(version));
@@ -1345,6 +1460,7 @@ app.whenReady().then(() => {
   ipcMain.handle("vault-lock", () => lockVault());
   ipcMain.handle("vault-list", () => listVaultEntries());
   ipcMain.handle("vault-save-entry", (_event, entry) => saveVaultEntry(entry));
+  ipcMain.handle("vault-update-entry", (_event, id, entry) => updateVaultEntry(id, entry));
   ipcMain.handle("vault-delete-entry", (_event, id) => deleteVaultEntry(id));
   ipcMain.handle("vault-reveal-password", (_event, id) => getVaultEntryPassword(id));
   ipcMain.handle("vault-copy-username", (_event, id) => {
@@ -1366,11 +1482,15 @@ app.whenReady().then(() => {
     return true;
   });
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
+    if (BrowserWindow.getAllWindows().length === 0) showMainWindow();
   });
 });
 
-app.on("before-quit", () => lockVault());
+app.on("before-quit", () => {
+  isQuitting = true;
+  lockVault();
+  if (tray) tray.destroy();
+});
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
