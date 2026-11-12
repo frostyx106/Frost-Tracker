@@ -96,7 +96,7 @@ window.frost.onUpdateDownloadProgress(showUpdateProgress);
 window.frost.onUpdateDownloaded(update => {
   $("update-progress-fill").style.width = "100%";
   $("update-progress-track").setAttribute("aria-valuenow", "100");
-  $("update-progress-title").textContent = `Frost Tracker v${update.version} is ready`;
+  $("update-progress-title").textContent = `KEEPER v${update.version} is ready`;
   $("update-progress-message").textContent = "Restarting to finish the update...";
   $("update-progress-close").hidden = true;
 });
@@ -187,7 +187,7 @@ function renderWhatsNewList(notesText) {
 
 function renderWhatsNewDialog(version, releaseNotes) {
   const dialogBrand = $("whats-new-dialog").querySelector(".update-dialog-brand span");
-  if (dialogBrand) dialogBrand.textContent = `FROST TRACKER · v${version}`;
+  if (dialogBrand) dialogBrand.textContent = `KEEPER · v${version}`;
   renderWhatsNewList(releaseNotes || "No release notes available for this update.");
 }
 
@@ -852,7 +852,7 @@ function renderPlayerInsights(matches, emptyMessage = "Search a player to calcul
     item.className = "agent-showcase-item";
     const icon = document.createElement("div");
     icon.className = "agent-showcase-icon";
-    const imageUrl = agentGames.find(match => match.agentIcon)?.agentIcon;
+    const imageUrl = agentGames.find(match => match.agentIcon)?.agentIcon || "";
     if (imageUrl) {
       const image = document.createElement("img");
       image.src = imageUrl;
@@ -1179,7 +1179,7 @@ function navigate(page) {
   const target = $(page+"-page");
   if (target) target.classList.add("active");
   document.querySelectorAll(".nav-item").forEach(b => b.classList.toggle("active", b.dataset.page===page));
-  const names = {overview:"Player Stats",matches:"Recent Matches",compare:"Performance",settings:"Settings"};
+  const names = {overview:"Player Stats",matches:"Match History",compare:"Performance",vault:"Personal Vault",settings:"Settings"};
   $("page-title").textContent = names[page] || "Overview";
 }
 document.querySelectorAll(".nav-item").forEach(b => b.addEventListener("click", () => navigate(b.dataset.page)));
@@ -1539,7 +1539,7 @@ function showVaultGate(profiles, mode = "picker") {
     $("vault-gate-submit").textContent = "Unlock profile";
     showStatus($("vault-gate-status"), "Profile locked.");
   } else {
-    $("vault-gate-title").textContent = "Who's using Frost Tracker?";
+    $("vault-gate-title").textContent = "Who's using KEEPER?";
     $("vault-gate-description").textContent = profiles.length
       ? "Choose a profile to unlock its personal vault."
       : "Create your first profile to get started.";

@@ -322,10 +322,16 @@
   gap: 6px;
   min-width: 0;
   padding: 0 9px;
-  border: 1px solid rgba(211, 190, 255, .14);
+  border: 1px solid color-mix(in srgb, var(--red) 28%, var(--line));
   border-radius: 9px;
-  background: rgba(8, 6, 13, .52);
-  color: #a99bbd;
+  background: color-mix(in srgb, var(--bg) 88%, var(--red) 12%);
+  color: var(--muted);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.vault-search-wrap:focus-within {
+  border-color: var(--theme-focus, var(--red));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--red) 18%, transparent);
 }
 
 .vault-search-wrap>span:first-child {

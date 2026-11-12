@@ -1,7 +1,7 @@
 {
   "name": "frost-tracker",
-  "version": "0.93.6",
-  "description": "Frost Tracker - VALORANT companion desktop beta",
+  "version": "0.93.7",
+  "description": "KEEPER - VALORANT companion desktop beta",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -10,8 +10,9 @@
     "release": "electron-builder --win nsis --publish always"
   },
   "build": {
+    "productName": "KEEPER",
     "appId": "com.electron.frost-tracker",
-    "artifactName": "frost-tracker-Setup-${version}.${ext}",
+    "artifactName": "KEEPER-Setup-${version}.${ext}",
     "files": [
       "main.js",
       "preload.js",
@@ -21,7 +22,7 @@
       "package.json"
     ],
     "win": {
-      "icon": "assets/frost-tracker.ico"
+      "icon": "assets/keeper.ico"
     },
     "nsis": {
       "oneClick": true,

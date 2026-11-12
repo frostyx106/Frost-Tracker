@@ -148,7 +148,7 @@ function configureAutoUpdates() {
     });
   });
   autoUpdater.on("update-downloaded", async info => {
-    console.info(`Frost Tracker ${info.version} downloaded; restarting to install.`);
+    console.info(`KEEPER ${info.version} downloaded; restarting to install.`);
     updateDownloadStarted = false;
     await setPendingWhatsNewVersion(info.version);
     sendUpdateEvent("update-downloaded", { version: info.version });
@@ -157,7 +157,7 @@ function configureAutoUpdates() {
 
   const checkForUpdates = () => {
     autoUpdater.checkForUpdates().catch(error => {
-      console.error("Could not check for Frost Tracker updates.", error);
+      console.error("Could not check for KEEPER updates.", error);
     });
   };
   checkForUpdates();
@@ -173,8 +173,8 @@ function createMainWindow() {
     minHeight: 720,
     frame: false,
     backgroundColor: "#090b10",
-    icon: path.join(__dirname, "assets", "frost-tracker.ico"),
-    title: "Frost Tracker",
+    icon: path.join(__dirname, "assets", "keeper.ico"),
+    title: "KEEPER",
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -684,9 +684,9 @@ async function exportVaultBackup() {
   const vault = requireUnlockedVault();
   const profile = (await loadVaultProfiles()).find(item => item.id === vault.profileId);
   const result = await dialog.showSaveDialog(mainWindow, {
-    title: "Save encrypted Frost Tracker vault backup",
+    title: "Save encrypted KEEPER vault backup",
     defaultPath: path.join(app.getPath("documents"), `frost-${profile?.name || "profile"}-${new Date().toISOString().slice(0, 10)}.ftvault`),
-    filters: [{ name: "Frost Tracker encrypted vault", extensions: ["ftvault"] }]
+    filters: [{ name: "KEEPER encrypted vault", extensions: ["ftvault"] }]
   });
   if (result.canceled || !result.filePath) return { canceled: true };
   await fs.copyFile(vault.filePath, result.filePath);
@@ -699,9 +699,9 @@ async function restoreVaultBackup({ passcode }) {
   if (profiles.length >= 5) throw new Error("Delete a profile before restoring another one. The maximum is five.");
   const isMain = profiles.length === 0;
   const result = await dialog.showOpenDialog(mainWindow, {
-    title: "Restore encrypted Frost Tracker vault backup",
+    title: "Restore encrypted KEEPER vault backup",
     properties: ["openFile"],
-    filters: [{ name: "Frost Tracker encrypted vault", extensions: ["ftvault"] }]
+    filters: [{ name: "KEEPER encrypted vault", extensions: ["ftvault"] }]
   });
   if (result.canceled || !result.filePaths[0]) return { canceled: true };
 
@@ -896,7 +896,7 @@ async function fetchRecentMatchPages(matchesUrl, apiKey) {
   const matches = [];
   const pageErrors = [];
   let reachedRequiredHistory = false;
-  let start = 1;
+  let start = 0;
   while (matches.length < maxMatches) {
     const url = new URL(matchesUrl);
     url.searchParams.set("size", String(pageSize));
@@ -932,11 +932,23 @@ async function fetchRecentMatchPages(matchesUrl, apiKey) {
     matches.push(...newMatches.slice(0, maxMatches - matches.length));
     start += page.length;
   }
+  const getStartedAt = match => {
+    const value = match.metadata?.started_at;
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value < 1e12 ? value * 1000 : value;
+    }
+    if (typeof value === "string" && /^\d+(?:\.\d+)?$/.test(value.trim())) {
+      const timestamp = Number(value);
+      return timestamp < 1e12 ? timestamp * 1000 : timestamp;
+    }
+    const timestamp = Date.parse(value || "");
+    return Number.isFinite(timestamp) ? timestamp : 0;
+  };
   const uniqueMatches = [...new Map(matches.map((match, index) => [
     match.metadata?.match_id || `${match.metadata?.started_at || "match"}-${index}`,
     match
   ])).values()].sort((left, right) =>
-    Date.parse(right.metadata?.started_at || "") - Date.parse(left.metadata?.started_at || "")
+    getStartedAt(right) - getStartedAt(left)
   );
   return {
     matches: uniqueMatches.slice(0, 30),
@@ -963,11 +975,17 @@ async function fetchValorantAssets() {
         return Array.isArray(payload?.data) ? payload.data : [];
       };
       const [agents, tierSets] = await Promise.all([readData(agentsResult), readData(tiersResult)]);
-      const agentAssets = new Map(agents.map(agent => [String(agent.displayName || "").toLowerCase(), {
-        icon: agent.displayIconSmall || agent.displayIcon || "",
-        portrait: agent.fullPortrait || agent.bustPortrait || "",
-        role: agent.role?.displayName || ""
-      }]));
+      const agentAssets = new Map(agents.flatMap(agent => {
+        const asset = {
+          icon: agent.displayIconSmall || agent.displayIcon || "",
+          portrait: agent.fullPortrait || agent.bustPortrait || "",
+          role: agent.role?.displayName || ""
+        };
+        return [agent.displayName, agent.uuid]
+          .map(normalizeAgentAssetKey)
+          .filter(Boolean)
+          .map(key => [key, asset]);
+      }));
       const rankAssets = new Map();
       for (const tierSet of tierSets) {
         for (const tier of tierSet.tiers || []) {
@@ -983,6 +1001,10 @@ async function fetchValorantAssets() {
     });
   }
   return valorantAssetsPromise;
+}
+
+function normalizeAgentAssetKey(value) {
+  return typeof value === "string" ? value.trim().toLocaleLowerCase("en-US") : "";
 }
 
 function normalizeMatches(matches, puuid, agentAssets) {
@@ -1004,8 +1026,19 @@ function normalizeMatches(matches, puuid, agentAssets) {
     const legshots = Number(stats.legshots) || 0;
     const shots = headshots + bodyshots + legshots;
     const headshotRate = shots ? Math.round((headshots / shots) * 100) : null;
-    const agentName = player.agent?.name || "Unknown agent";
-    const agentAsset = agentAssets.get(agentName.toLowerCase());
+    const agentDetails = player.agent;
+    const agentNameValue = typeof agentDetails === "string" ? agentDetails : agentDetails?.name;
+    const agentName = typeof agentNameValue === "string" ? agentNameValue.trim() || "Unknown agent" : "Unknown agent";
+    const agentAssetKeys = [
+      agentName,
+      typeof agentDetails === "string" ? agentDetails : "",
+      agentDetails?.displayName,
+      agentDetails?.id,
+      agentDetails?.uuid
+    ].map(normalizeAgentAssetKey).filter(Boolean);
+    const agentAsset = agentAssetKeys
+      .map(key => agentAssets.get(key))
+      .find(Boolean);
     const agentRole = player.agent?.role;
     const season = match.metadata?.season;
     const seasonId = typeof season === "string" ? season : season?.id || season?.short || "";

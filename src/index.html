@@ -4,16 +4,17 @@
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data: blob: https://media.valorant-api.com; worker-src 'self' blob:;">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Frost Tracker</title>
+  <title>KEEPER</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="player-stats.css">
   <link rel="stylesheet" href="vault-ui.css">
+  <link rel="stylesheet" href="design-system.css">
 </head>
 <body>
   <header id="window-titlebar" class="window-titlebar">
     <div class="window-titlebar-brand">
-      <img class="window-titlebar-icon" src="../assets/frost-tracker.png" alt="">
-      <span>Frost Tracker</span>
+      <img class="window-titlebar-icon" src="../assets/keeper.png" alt="">
+      <span>KEEPER</span>
     </div>
     <div class="window-controls">
       <button class="window-control-button" id="window-minimize" type="button" aria-label="Minimize" title="Minimize">
@@ -30,9 +31,9 @@
   </header>
   <main id="vault-gate" class="vault-gate">
     <section class="vault-gate-panel">
-      <div class="brand-mark"><img src="../assets/frost-tracker.png" alt="Frost Tracker"></div>
-      <div class="eyebrow">FROST TRACKER</div>
-      <h1 id="vault-gate-title">Who's using Frost Tracker?</h1>
+      <div class="brand-mark"><img src="../assets/keeper.png" alt="KEEPER"></div>
+      <div class="eyebrow">KEEPER</div>
+      <h1 id="vault-gate-title">Who's using KEEPER?</h1>
       <p id="vault-gate-description">Choose a profile to unlock its personal vault.</p>
       <section id="profile-picker-view" class="profile-picker-view" hidden>
         <div class="profile-picker-toolbar"><span>YOUR PROFILES</span><button id="edit-profiles-button" class="text-button" type="button" aria-pressed="false">Edit</button></div>
@@ -67,8 +68,8 @@
   <div class="app-shell" id="app-shell" hidden>
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-mark"><img src="../assets/frost-tracker.png" alt=""></div>
-        <div><div class="brand-name">FROST<span>TRACKER</span></div><div class="brand-sub">VALORANT COMPANION</div></div>
+        <div class="brand-mark"><img src="../assets/keeper.png" alt=""></div>
+        <div><div class="brand-name">KEEPER</div><div class="brand-sub">VALORANT COMPANION</div></div>
       </div>
       <div class="nav-label">WORKSPACE</div>
       <button class="nav-item active" data-page="overview"><span>◫</span> Player Stats</button>
@@ -227,10 +228,10 @@
       </section>
 
       <section id="settings-page" class="page">
-        <div class="section-intro"><div><h1>Settings</h1><p>Configure your Frost Tracker experience.</p></div></div>
+        <div class="section-intro"><div><h1>Settings</h1><p>Configure your KEEPER experience.</p></div></div>
         <div class="panel settings-panel"><h2>HenrikDev API</h2><p class="setting-help">Use an API key from the HenrikDev dashboard. It is encrypted with Windows secure storage and sent only by the app process.</p><form id="api-key-form" class="api-key-form"><label for="henrikdev-api-key">API key</label><div><input id="henrikdev-api-key" type="password" autocomplete="new-password" spellcheck="false" placeholder="Paste your HenrikDev API key"><button class="button button-secondary" type="submit">Save key</button><button id="remove-api-key" class="text-button" type="button">Remove</button></div></form><p id="api-key-status" class="form-status" role="status" aria-live="polite">Checking secure storage...</p></div>
         <div class="panel settings-panel"><h2>Application</h2><div class="setting-row"><div><b>Application version</b><p>Beta build</p></div><span id="version">0.93.3 (Beta)</span></div><div class="setting-row"><div><b>Data source</b><p>Rank, match history, and Performance analytics are based on HenrikDev data for the searched player.</p></div><span class="muted-tag">LIVE DATA</span></div><div class="setting-row"><div><b>Riot account connection</b><p>Open &amp; Fill can switch accounts, fill sign-in fields, and submit. Complete 2FA manually.</p></div><span class="muted-tag">2FA MANUAL</span></div><div class="setting-row"><div><b>Privacy</b><p>Vault entries are encrypted locally and require your master passcode.</p></div><span class="muted-tag">LOCAL</span></div></div>
-        <div class="panel settings-panel theme-settings-panel"><h2>Theme</h2><p class="setting-help">Choose the color style used throughout Frost Tracker.</p><div class="setting-row theme-setting-row"><div><b>App appearance</b><p>Your theme is saved on this device.</p></div><select id="app-theme-setting" class="filter-select" aria-label="App theme"><option value="midnight-purple">Midnight Purple</option><option value="midnight-blue">Midnight Blue</option><option value="maroon">Maroon</option><option value="forest">Forest</option><option value="lilac">Lilac</option><option value="frost">Frost</option><option value="white">White</option><option value="black">Black</option><option value="custom">Custom theme</option></select></div><div id="custom-theme-controls" class="custom-theme-controls" hidden><div><b id="custom-theme-name">Choose a theme image</b><span>Colors are sampled on this device. Your wallpaper stays on this device.</span></div><label class="button button-secondary custom-theme-pick" for="custom-theme-image">Choose image<input id="custom-theme-image" type="file" accept=".png,.jpg,.jpeg,.webp,.svg,.heic,image/png,image/jpeg,image/webp,image/svg+xml,image/heic"></label><button id="clear-custom-theme" class="button custom-theme-clear" type="button" hidden>Clear</button></div><div id="custom-theme-wallpaper-controls" class="custom-theme-wallpaper-controls" hidden><label for="custom-theme-wallpaper-opacity">Wallpaper opacity</label><input id="custom-theme-wallpaper-opacity" type="range" min="0" max="100" step="1" value="100" aria-describedby="custom-theme-wallpaper-opacity-value"><output id="custom-theme-wallpaper-opacity-value" for="custom-theme-wallpaper-opacity">100%</output></div><p id="custom-theme-status" class="form-status" role="status" aria-live="polite"></p></div>
+        <div class="panel settings-panel theme-settings-panel"><h2>Theme</h2><p class="setting-help">Choose the color style used throughout KEEPER.</p><div class="setting-row theme-setting-row"><div><b>App appearance</b><p>Your theme is saved on this device.</p></div><select id="app-theme-setting" class="filter-select" aria-label="App theme"><option value="midnight-purple">Midnight Purple</option><option value="midnight-blue">Midnight Blue</option><option value="maroon">Maroon</option><option value="forest">Forest</option><option value="lilac">Lilac</option><option value="frost">Frost</option><option value="white">White</option><option value="black">Black</option><option value="custom">Custom theme</option></select></div><div id="custom-theme-controls" class="custom-theme-controls" hidden><div><b id="custom-theme-name">Choose a theme image</b><span>Colors are sampled on this device. Your wallpaper stays on this device.</span></div><label class="button button-secondary custom-theme-pick" for="custom-theme-image">Choose image<input id="custom-theme-image" type="file" accept=".png,.jpg,.jpeg,.webp,.svg,.heic,image/png,image/jpeg,image/webp,image/svg+xml,image/heic"></label><button id="clear-custom-theme" class="button custom-theme-clear" type="button" hidden>Clear</button></div><div id="custom-theme-wallpaper-controls" class="custom-theme-wallpaper-controls" hidden><label for="custom-theme-wallpaper-opacity">Wallpaper opacity</label><input id="custom-theme-wallpaper-opacity" type="range" min="0" max="100" step="1" value="100" aria-describedby="custom-theme-wallpaper-opacity-value"><output id="custom-theme-wallpaper-opacity-value" for="custom-theme-wallpaper-opacity">100%</output></div><p id="custom-theme-status" class="form-status" role="status" aria-live="polite"></p></div>
         <div class="panel settings-panel personal-profile-panel"><h2>Personal profile</h2><p class="setting-help">Manage the name and picture shown for this vault. Profile pictures can be up to 50 MB.</p><div class="profile-settings-summary"><img id="current-profile-avatar-preview" class="profile-settings-preview" alt="Current profile picture"><div><b id="profile-settings-display-name">Your profile</b><span>Private vault profile</span></div><i aria-hidden="true"></i></div><form id="profile-settings-form" class="profile-settings-form"><label>Profile name<input id="current-profile-name" maxlength="40" required></label><label>Profile picture<input id="current-profile-avatar-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label><div class="profile-settings-actions"><button class="button button-secondary" type="submit">Save changes</button><button id="delete-current-profile" class="button profile-delete-button" type="button">Delete profile</button></div></form><p id="profile-settings-status" class="form-status" role="status" aria-live="polite"></p></div>
         <div class="panel settings-panel"><h2>Security</h2><div class="setting-row"><div><b>Lock after inactivity</b><p>Automatically clear unlocked vault data after no input.</p></div><select id="vault-auto-lock-setting" class="filter-select"><option value="0">When app closes</option><option value="5">5 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option></select></div><div class="setting-row"><div><b>Master passcode</b><p>Change the six-digit vault passcode. Existing entries will be re-encrypted.</p></div><button id="change-vault-passcode-btn" class="button button-secondary" type="button">Reset master passcode</button></div><p id="security-settings-status" class="form-status" role="status" aria-live="polite"></p></div>
       </section>
@@ -254,12 +255,12 @@
         <div class="notice"><span>ⓘ</span><div><b>Local vault only</b><p>Open &amp; Fill may sign out an existing session when Riot exposes a named logout control, populate sign-in fields, select Stay signed in, and submit. Complete any 2FA manually. The vault does not sync to Google.</p></div></div>
       </section>
 
-      <footer class="footer"><span>FROST TRACKER <b id="footer-version">v0.93.3 (Beta)</b></span><span>UNOFFICIAL COMMUNITY COMPANION · NOT AFFILIATED WITH RIOT GAMES</span></footer>
+      <footer class="footer"><span>KEEPER <b id="footer-version">v0.93.3 (Beta)</b></span><span>UNOFFICIAL COMMUNITY COMPANION · NOT AFFILIATED WITH RIOT GAMES</span></footer>
     </main>
   </div>
   <dialog id="update-available-dialog" class="vault-dialog update-dialog" aria-labelledby="update-available-title">
     <div class="update-dialog-content">
-      <div class="update-dialog-brand"><img src="../assets/frost-tracker.png" alt=""><span>FROST TRACKER UPDATE</span></div>
+      <div class="update-dialog-brand"><img src="../assets/keeper.png" alt=""><span>KEEPER UPDATE</span></div>
       <h2 id="update-available-title">Update is here</h2>
       <p id="update-available-description">A new version is ready. Update now or come back to it later.</p>
       <div class="update-dialog-actions">
@@ -270,7 +271,7 @@
   </dialog>
   <dialog id="update-progress-dialog" class="vault-dialog update-dialog update-progress-dialog" aria-labelledby="update-progress-title">
     <div class="update-dialog-content">
-      <div class="update-dialog-brand"><img src="../assets/frost-tracker.png" alt=""><span>FROST TRACKER UPDATE</span></div>
+      <div class="update-dialog-brand"><img src="../assets/keeper.png" alt=""><span>KEEPER UPDATE</span></div>
       <h2 id="update-progress-title">Downloading update</h2>
       <p id="update-progress-message" aria-live="polite">Preparing your update...</p>
       <div id="update-progress-track" class="update-progress-track" role="progressbar" aria-label="Update download progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
@@ -284,7 +285,7 @@
     <div class="update-dialog-content">
       <div class="whats-new-heading">
         <div>
-          <div class="update-dialog-brand"><img src="../assets/frost-tracker.png" alt=""><span>FROST TRACKER · v0.93.3</span></div>
+          <div class="update-dialog-brand"><img src="../assets/keeper.png" alt=""><span>KEEPER · v0.93.3</span></div>
           <h2 id="whats-new-title">What’s new</h2>
         </div>
         <button id="whats-new-close" class="icon-button whats-new-close" type="button" aria-label="Close release notes" title="Close">×</button>
