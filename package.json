@@ -1,6 +1,6 @@
 {
   "name": "frost-tracker",
-  "version": "0.93.7",
+  "version": "0.93.8",
   "description": "KEEPER - VALORANT companion desktop beta",
   "main": "main.js",
   "scripts": {
