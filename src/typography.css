@@ -1,0 +1,63 @@
+@font-face {
+  font-family: "Univers 75";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../assets/fonts/univers-75.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Eurostile";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/eurostile-regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Eurostile";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../assets/fonts/eurostile-bold.woff2") format("woff2");
+}
+
+:root {
+  --font-body: "Eurostile", sans-serif;
+  --font-heading: "Univers 75", sans-serif;
+  --font-interactive: "Space Grotesk", sans-serif;
+  --font: var(--font-body);
+  --display: var(--font-heading);
+}
+
+body {
+  font-family: var(--font-body), sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading), sans-serif !important;
+}
+
+body :is(button, select, option, a, summary, label, [role="button"], [role="tab"], .nav-item, .settings-tab) {
+  font-family: var(--font-interactive), sans-serif !important;
+}
+
+body input,
+body textarea,
+body input::placeholder,
+body textarea::placeholder,
+body [role="tooltip"],
+body .tooltip {
+  font-family: var(--font-body), sans-serif !important;
+}
+
+body :is(.eyebrow, .nav-label, .stat-top, .muted-tag, .performance-card-label,
+  .player-current-rank > div > span, .player-peak-rank > div > span, .player-level,
+  .table-panel th, .live-section-kicker, .live-coming-soon-label) {
+  font-family: var(--font-heading), sans-serif !important;
+}

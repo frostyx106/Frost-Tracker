@@ -1,9 +1,10 @@
 const { app, BrowserWindow, ipcMain, safeStorage, clipboard, dialog, shell, Tray, Menu, nativeImage } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const fs = require("fs/promises");
-const { createCipheriv, createDecipheriv, randomBytes, randomUUID, scrypt } = require("crypto");
+const { createCipheriv, createDecipheriv, randomBytes, randomUUID, scrypt, timingSafeEqual } = require("crypto");
 const { spawn } = require("child_process");
 const path = require("path");
+const https = require("https");
 const { promisify } = require("util");
 
 const deriveVaultKey = promisify(scrypt);
@@ -48,9 +49,13 @@ let unlockedVault = null;
 let failedVaultUnlocks = 0;
 let vaultLockedUntil = 0;
 let valorantAssetsPromise = null;
+let valorantSkinsCatalogPromise = null;
 let henrikRequestQueue = Promise.resolve();
 let lastHenrikRequestAt = 0;
 let henrikCooldownUntil = 0;
+const livePlayerInsightCache = new Map();
+const livePlayerInsightRequests = new Map();
+const LIVE_PLAYER_INSIGHT_TTL_MS = 15 * 60 * 1000;
 const HENRIK_REQUEST_INTERVAL_MS = 1000;
 const HENRIK_RATE_LIMIT_FALLBACK_MS = 60 * 1000;
 const UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
@@ -773,7 +778,35 @@ async function deleteVaultProfile({ profileId, passcode }) {
   return remainingProfiles.map(publicVaultProfile);
 }
 
-function getVaultEntryPassword(id) {
+async function verifyUnlockedVaultPasscode(passcode) {
+  const vault = requireUnlockedVault();
+  validateMasterPasscode(passcode, vault.profileId === "legacy");
+  const waitMilliseconds = vaultLockedUntil - Date.now();
+  if (waitMilliseconds > 0) {
+    throw new Error(`Too many attempts. Try again in ${Math.ceil(waitMilliseconds / 1000)} seconds.`);
+  }
+
+  const candidateKey = await deriveVaultKey(passcode, vault.salt, 32, vaultKdfOptions);
+  let matches;
+  try {
+    matches = candidateKey.length === vault.key.length && timingSafeEqual(candidateKey, vault.key);
+  } finally {
+    candidateKey.fill(0);
+  }
+  if (!matches) {
+    failedVaultUnlocks += 1;
+    if (failedVaultUnlocks >= 5) {
+      const delaySeconds = Math.min(300, 30 * (2 ** (failedVaultUnlocks - 5)));
+      vaultLockedUntil = Date.now() + delaySeconds * 1000;
+    }
+    throw new Error("Incorrect passcode. Check the code and try again.");
+  }
+  failedVaultUnlocks = 0;
+  vaultLockedUntil = 0;
+}
+
+async function getVaultEntryPassword(id, passcode) {
+  await verifyUnlockedVaultPasscode(passcode);
   const entry = requireUnlockedVault().entries.find(item => item.id === id);
   if (!entry) throw new Error("Vault item not found.");
   return entry.password;
@@ -926,7 +959,9 @@ async function logHenrikDev(message) {
   }
 }
 
-async function fetchHenrikDevData(url, apiKey, notFoundMessage) {
+async function fetchHenrikDevData(url, apiKey, notFoundMessage, options = {}) {
+  const logLabel = options.logLabel || String(url);
+  const includeErrorBody = options.includeErrorBody !== false;
   const request = henrikRequestQueue.then(async () => {
     const waitMs = Math.max(
       henrikCooldownUntil - Date.now(),
@@ -945,7 +980,7 @@ async function fetchHenrikDevData(url, apiKey, notFoundMessage) {
       });
     } catch (error) {
       const cause = error?.cause?.code || error?.cause?.message || "";
-      await logHenrikDev(`NETWORK ERROR ${String(url)} after ${Date.now() - startedAt}ms: ${error?.name || "Error"}: ${error?.message || error}${cause ? ` (cause: ${cause})` : ""} key=${maskApiKey(apiKey)}`);
+      await logHenrikDev(`NETWORK ERROR ${logLabel} after ${Date.now() - startedAt}ms: ${error?.name || "Error"}: ${error?.message || error}${cause ? ` (cause: ${cause})` : ""} key=${maskApiKey(apiKey)}`);
       throw new Error(error?.name === "TimeoutError"
         ? "HenrikDev did not respond within 15 seconds."
         : `Could not reach HenrikDev: ${error?.message || "network error"}${cause ? ` (${cause})` : ""}.`);
@@ -953,7 +988,7 @@ async function fetchHenrikDevData(url, apiKey, notFoundMessage) {
     const rawBody = await response.text().catch(() => "");
     let payload = null;
     try { payload = rawBody ? JSON.parse(rawBody) : null; } catch { payload = null; }
-    await logHenrikDev(`${response.status} ${response.statusText} ${String(url)} (${Date.now() - startedAt}ms) key=${maskApiKey(apiKey)}${response.ok ? "" : ` body=${rawBody.slice(0, 2000)}`}`);
+    await logHenrikDev(`${response.status} ${response.statusText} ${logLabel} (${Date.now() - startedAt}ms) key=${maskApiKey(apiKey)}${response.ok || !includeErrorBody ? "" : ` body=${rawBody.slice(0, 2000)}`}`);
 
     if (!response.ok) {
       const retryAfter = response.headers.get("retry-after");
@@ -1076,6 +1111,7 @@ async function fetchValorantAssets() {
       const [agents, tierSets] = await Promise.all([readData(agentsResult), readData(tiersResult)]);
       const agentAssets = new Map(agents.flatMap(agent => {
         const asset = {
+          name: agent.displayName || "",
           icon: agent.displayIconSmall || agent.displayIcon || "",
           portrait: agent.fullPortrait || agent.bustPortrait || "",
           role: agent.role?.displayName || ""
@@ -1086,20 +1122,135 @@ async function fetchValorantAssets() {
           .map(key => [key, asset]);
       }));
       const rankAssets = new Map();
+      const rankTiers = new Map();
       for (const tierSet of tierSets) {
         for (const tier of tierSet.tiers || []) {
           if (tier.tierName && tier.smallIcon) {
             rankAssets.set(tier.tierName.toLowerCase(), tier.smallIcon);
           }
+          const tierNumber = Number(tier.tier);
+          if (tier.tierName && Number.isFinite(tierNumber)) {
+            rankTiers.set(tierNumber, tier.tierName);
+          }
         }
       }
-      return { agentAssets, rankAssets };
+      return { agentAssets, rankAssets, rankTiers };
     }).catch(error => {
       console.warn("Could not retrieve optional VALORANT art assets.", error);
-      return { agentAssets: new Map(), rankAssets: new Map() };
+      return { agentAssets: new Map(), rankAssets: new Map(), rankTiers: new Map() };
     });
   }
   return valorantAssetsPromise;
+}
+
+async function fetchValorantSkinsCatalog() {
+  if (!valorantSkinsCatalogPromise) {
+    valorantSkinsCatalogPromise = Promise.all([
+      fetch("https://valorant-api.com/v1/weapons", {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(15000)
+      }),
+      fetch("https://valorant-api.com/v1/contenttiers", {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(15000)
+      })
+    ]).then(async ([weaponsResponse, tiersResponse]) => {
+      if (!weaponsResponse.ok) {
+        throw new Error(`The VALORANT weapon catalog returned HTTP ${weaponsResponse.status}.`);
+      }
+      if (!tiersResponse.ok) {
+        throw new Error(`The VALORANT skin tiers returned HTTP ${tiersResponse.status}.`);
+      }
+      const [weaponsPayload, tiersPayload] = await Promise.all([
+        weaponsResponse.json(),
+        tiersResponse.json()
+      ]);
+      if (!Array.isArray(weaponsPayload?.data) || !Array.isArray(tiersPayload?.data)) {
+        throw new Error("The VALORANT skin catalog returned an invalid response.");
+      }
+
+      const skinPricesByTierRank = new Map([[0, 875], [1, 1275], [2, 1775], [3, 2175], [4, 2475]]);
+      const tiersByUuid = new Map(tiersPayload.data
+        .filter(tier => typeof tier?.uuid === "string")
+        .map(tier => [tier.uuid, tier]));
+      const categoryName = value => {
+        const category = typeof value === "string" ? value.toLowerCase() : "";
+        if (category.includes("sidearm")) return "Sidearms";
+        if (category.includes("smg")) return "SMGs";
+        if (category.includes("shotgun")) return "Shotguns";
+        if (category.includes("rifle")) return "Rifles";
+        if (category.includes("sniper")) return "Snipers";
+        if (category.includes("heavy")) return "Machine guns";
+        if (category.includes("melee")) return "Melee";
+        return "Other";
+      };
+      const imageUrl = value => getValorantImageUrl(value);
+      const videoUrl = value => {
+        if (typeof value !== "string") return "";
+        try {
+          const url = new URL(value);
+          return url.protocol === "https:" && url.hostname === "valorant.dyn.riotcdn.net" ? url.href : "";
+        } catch {
+          return "";
+        }
+      };
+
+      const skins = [];
+      for (const weapon of weaponsPayload.data) {
+        if (typeof weapon?.uuid !== "string" || typeof weapon?.displayName !== "string") continue;
+        const weaponCategory = categoryName(weapon.category || weapon.shopData?.categoryText);
+        for (const skin of Array.isArray(weapon.skins) ? weapon.skins : []) {
+          if (typeof skin?.uuid !== "string" || typeof skin?.displayName !== "string" ||
+            skin.uuid === weapon.defaultSkinUuid) continue;
+          const tier = tiersByUuid.get(skin.contentTierUuid);
+          const variants = (Array.isArray(skin.chromas) ? skin.chromas : [])
+            .filter(chroma => typeof chroma?.uuid === "string")
+            .map(chroma => ({
+              uuid: chroma.uuid,
+              name: typeof chroma.displayName === "string" ? chroma.displayName : "Variant",
+              image: imageUrl(chroma.fullRender) || imageUrl(chroma.displayIcon),
+              swatch: imageUrl(chroma.swatch),
+              video: videoUrl(chroma.streamedVideo)
+            }));
+          const levels = (Array.isArray(skin.levels) ? skin.levels : [])
+            .filter(level => typeof level?.uuid === "string")
+            .map((level, index) => ({
+              uuid: level.uuid,
+              name: typeof level.displayName === "string" ? level.displayName : `Level ${index + 1}`,
+              image: imageUrl(level.displayIcon),
+              video: videoUrl(level.streamedVideo)
+            }));
+          const highlightColor = typeof tier?.highlightColor === "string" &&
+            /^[0-9a-f]{6}(?:[0-9a-f]{2})?$/i.test(tier.highlightColor)
+            ? `#${tier.highlightColor.slice(0, 6)}`
+            : "";
+          const tierRank = Number.isInteger(tier?.rank) ? tier.rank : null;
+          skins.push({
+            uuid: skin.uuid,
+            name: skin.displayName,
+            weapon: weapon.displayName,
+            weaponImage: imageUrl(weapon.displayIcon),
+            weaponOrder: Number.isFinite(weapon.shopData?.shopOrderPriority)
+              ? weapon.shopData.shopOrderPriority
+              : skins.length,
+            category: weaponCategory,
+            tier: typeof tier?.displayName === "string" ? tier.displayName.replace(/\s+Edition$/i, "") : "Standard",
+            tierRank,
+            tierColor: highlightColor,
+            typicalPrice: tierRank === null ? null : skinPricesByTierRank.get(tierRank) || null,
+            image: variants.find(variant => variant.image)?.image || imageUrl(skin.displayIcon),
+            variants,
+            levels
+          });
+        }
+      }
+      return skins;
+    }).catch(error => {
+      valorantSkinsCatalogPromise = null;
+      throw error;
+    });
+  }
+  return valorantSkinsCatalogPromise;
 }
 
 function normalizeAgentAssetKey(value) {
@@ -1170,6 +1321,405 @@ function normalizeMatches(matches, puuid, agentAssets) {
       hs: headshotRate === null ? "—" : `${headshotRate}%`
     }];
   });
+}
+
+function getLiveField(value, ...keys) {
+  for (const key of keys) {
+    if (value && value[key] !== undefined && value[key] !== null) return value[key];
+  }
+  return undefined;
+}
+
+function parseRiotLockfile(contents, expectedProcessName = "") {
+  const [processName, processId, portValue, password, protocol] = contents.trim().split(":");
+  const port = Number(portValue);
+  if (!processName || !Number.isInteger(Number(processId)) || !Number.isInteger(port) ||
+      port < 1 || port > 65535 || !password || protocol?.toLowerCase() !== "https" ||
+      (expectedProcessName && !new RegExp(`^${expectedProcessName}(?:[-_].*)?$`, "i").test(processName))) {
+    throw new Error("The local Riot session file is invalid. Restart VALORANT and try again.");
+  }
+  return { port, password };
+}
+
+async function readRiotLockfile(lockfilePath, expectedProcessName = "") {
+  let contents;
+  try {
+    contents = await fs.readFile(lockfilePath, "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw new Error("Could not read the local Riot session.");
+  }
+  return parseRiotLockfile(contents, expectedProcessName);
+}
+
+async function readValorantOrRiotClientSession() {
+  const valorantLockfilePaths = [];
+  const programData = process.env.PROGRAMDATA;
+  if (programData) {
+    const installsPath = path.join(programData, "Riot Games", "RiotClientInstalls.json");
+    let installs;
+    try {
+      installs = JSON.parse(await fs.readFile(installsPath, "utf8"));
+    } catch (error) {
+      if (error.code !== "ENOENT") {
+        throw new Error("Could not read Riot's registered game-install paths.");
+      }
+    }
+
+    const associatedClients = installs?.associated_client;
+    if (associatedClients && typeof associatedClients === "object" && !Array.isArray(associatedClients)) {
+      for (const installPath of Object.keys(associatedClients)) {
+        if (/(?:^|[\\/])valorant(?:[\\/]|$)/i.test(installPath)) {
+          valorantLockfilePaths.push(path.join(installPath, "lockfile"));
+        }
+      }
+    }
+  }
+
+  for (const lockfilePath of valorantLockfilePaths) {
+    const session = await readRiotLockfile(lockfilePath, "VALORANT");
+    if (session) return session;
+  }
+
+  const localAppData = process.env.LOCALAPPDATA;
+  if (!localAppData) return null;
+  const riotClientLockfilePath = path.join(localAppData, "Riot Games", "Riot Client", "Config", "lockfile");
+  return readRiotLockfile(riotClientLockfilePath);
+}
+
+function requestRiotClientJson(session, route, { method = "GET", body, allowNotFound = false } = {}) {
+  return new Promise((resolve, reject) => {
+    const bodyText = body === undefined ? "" : JSON.stringify(body);
+    const headers = {
+      Accept: "application/json",
+      Authorization: `Basic ${Buffer.from(`riot:${session.password}`).toString("base64")}`
+    };
+    if (bodyText) {
+      headers["Content-Type"] = "application/json";
+      headers["Content-Length"] = Buffer.byteLength(bodyText);
+    }
+
+    const request = https.request({
+      hostname: "127.0.0.1",
+      port: session.port,
+      path: route,
+      method,
+      headers,
+      rejectUnauthorized: false,
+      timeout: 3000
+    }, response => {
+      if (response.statusCode === 404 && allowNotFound) {
+        response.resume();
+        resolve(null);
+        return;
+      }
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        response.resume();
+        reject(new Error(response.statusCode === 401 || response.statusCode === 403
+          ? "Riot Client authentication expired. Restart Riot Client and sign in."
+          : `Riot Client could not provide live-match data (HTTP ${response.statusCode}).`));
+        return;
+      }
+
+      const chunks = [];
+      let responseBytes = 0;
+      response.on("data", chunk => {
+        responseBytes += chunk.length;
+        if (responseBytes > 4 * 1024 * 1024) {
+          request.destroy(new Error("Riot Client returned an oversized live-match response."));
+          return;
+        }
+        chunks.push(chunk);
+      });
+      response.on("end", () => {
+        try {
+          resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+        } catch {
+          reject(new Error("Riot Client returned invalid live-match data."));
+        }
+      });
+    });
+
+    request.on("timeout", () => request.destroy(new Error("Riot Client did not respond in time.")));
+    request.on("error", error => {
+      reject(error.message.includes("live-match") || error.message.includes("respond in time")
+        ? error
+        : new Error("Could not connect to the local Riot Client. Make sure it is running."));
+    });
+    if (bodyText) request.write(bodyText);
+    request.end();
+  });
+}
+
+function getLiveRawPlayers(match) {
+  const teams = getLiveField(match, "Teams", "teams");
+  if (Array.isArray(teams)) {
+    return teams.flatMap(team => {
+      const teamId = getLiveField(team, "TeamID", "teamId", "team_id") || "";
+      const players = getLiveField(team, "Players", "players");
+      return Array.isArray(players)
+        ? players.map(player => ({ player, teamId: getLiveField(player, "TeamID", "teamId", "team_id") || teamId }))
+        : [];
+    });
+  }
+
+  const players = getLiveField(match, "AllPlayers", "Players", "players");
+  return Array.isArray(players)
+    ? players.map(player => ({
+      player,
+      teamId: getLiveField(player, "TeamID", "teamId", "team_id") || ""
+    }))
+    : [];
+}
+
+function calculateLiveRecentForm(matches) {
+  const played = matches.filter(match => ["W", "L", "D"].includes(match.result));
+  const wins = played.filter(match => match.result === "W").length;
+  const kills = matches.reduce((total, match) => total + match.kills, 0);
+  const deaths = matches.reduce((total, match) => total + match.deaths, 0);
+  const headshots = matches.reduce((total, match) => total + match.headshots, 0);
+  const shots = matches.reduce((total, match) => total + match.headshots + match.bodyshots + match.legshots, 0);
+  const kd = deaths ? kills / deaths : null;
+  return {
+    sampleSize: matches.length,
+    winRate: played.length ? Math.round((wins / played.length) * 100) : null,
+    kd: Number.isFinite(kd) ? Number(kd.toFixed(2)) : null,
+    kdLabel: deaths ? Number(kd.toFixed(2)).toFixed(2) : kills ? "∞" : "—",
+    headshotRate: shots ? Math.round((headshots / shots) * 100) : null
+  };
+}
+
+function getLiveSmurfWarning(accountLevel, rankName, form) {
+  const highRank = /diamond|ascendant|immortal|radiant/i.test(rankName || "");
+  if (Number.isFinite(accountLevel) && accountLevel <= 40 && highRank &&
+      form?.sampleSize >= 5 && form.kd >= 1.4 && form.winRate >= 60) {
+    return "Possible alt: low account level for rank and strong recent stats.";
+  }
+  return "";
+}
+
+async function loadLivePlayerInsight(puuid) {
+  const apiKey = await getHenrikDevApiKey();
+  if (!apiKey) throw new Error("Add a HenrikDev API key in Settings for player insights.");
+
+  const encodedPuuid = encodeURIComponent(puuid);
+  const accountUrl = new URL(`https://api.henrikdev.xyz/valorant/v2/by-puuid/account/${encodedPuuid}`);
+  const account = await fetchHenrikDevData(accountUrl, apiKey, "No public player account was found.", {
+    logLabel: "Live match account lookup",
+    includeErrorBody: false
+  });
+  const region = typeof account?.region === "string" ? account.region.toLowerCase() : "";
+  const platforms = Array.isArray(account?.platforms)
+    ? account.platforms.map(platform => String(platform).toLowerCase())
+    : [];
+  const platform = platforms.includes("pc") ? "pc" : platforms.includes("console") ? "console" : "";
+  const validAffinities = new Set(["na", "eu", "ap", "kr", "latam", "br"]);
+  if (!validAffinities.has(region) || !platform) {
+    throw new Error("HenrikDev could not determine this player's region and platform.");
+  }
+
+  const rankUrl = new URL(`https://api.henrikdev.xyz/valorant/v3/by-puuid/mmr/${region}/${platform}/${encodedPuuid}`);
+  const matchesUrl = new URL(`https://api.henrikdev.xyz/valorant/v4/by-puuid/matches/${region}/${platform}/${encodedPuuid}`);
+  matchesUrl.searchParams.set("size", "10");
+  matchesUrl.searchParams.set("start", "0");
+  const [rankResult, matchesResult, assetsResult] = await Promise.allSettled([
+    fetchHenrikDevData(rankUrl, apiKey, "No public rank data was found for this player.", {
+      logLabel: "Live match rank lookup",
+      includeErrorBody: false
+    }),
+    fetchHenrikDevData(matchesUrl, apiKey, "No recent public matches were found for this player.", {
+      logLabel: "Live match history lookup",
+      includeErrorBody: false
+    }),
+    fetchValorantAssets()
+  ]);
+  const rank = rankResult.status === "fulfilled" ? rankResult.value : null;
+  const rawMatches = matchesResult.status === "fulfilled" && Array.isArray(matchesResult.value)
+    ? matchesResult.value.slice(0, 10)
+    : [];
+  const assets = assetsResult.status === "fulfilled"
+    ? assetsResult.value
+    : { agentAssets: new Map(), rankAssets: new Map(), rankTiers: new Map() };
+  const recentMatches = normalizeMatches(rawMatches, puuid, assets.agentAssets);
+  const form = calculateLiveRecentForm(recentMatches);
+  const currentRank = rank?.current?.tier?.name || "";
+  const peakRank = rank?.peak?.tier?.name || "";
+  const recentPlayerIds = new Set();
+  for (const match of rawMatches) {
+    const players = getLiveField(match, "players", "Players");
+    if (!Array.isArray(players)) continue;
+    for (const player of players) {
+      const seenPuuid = getLiveField(player, "puuid", "PUUID", "subject", "Subject");
+      if (typeof seenPuuid === "string" && seenPuuid !== puuid) recentPlayerIds.add(seenPuuid);
+    }
+  }
+  const errors = [rankResult, matchesResult]
+    .filter(result => result.status === "rejected")
+    .map(result => result.reason?.message || "A public player statistic could not be loaded.");
+  const accountLevel = Number(account.account_level);
+  return {
+    name: account.name || "",
+    tag: account.tag || "",
+    accountLevel: Number.isFinite(accountLevel) ? accountLevel : null,
+    currentRank,
+    currentRankIcon: assets.rankAssets.get(currentRank.toLowerCase()) || "",
+    peakRank,
+    peakRankIcon: assets.rankAssets.get(peakRank.toLowerCase()) || "",
+    form: recentMatches.length ? form : null,
+    smurfWarning: getLiveSmurfWarning(accountLevel, currentRank, form),
+    recentPlayerIds: [...recentPlayerIds],
+    error: errors.join(" ")
+  };
+}
+
+function queueLivePlayerInsight(puuid) {
+  const cached = livePlayerInsightCache.get(puuid);
+  if (cached?.expiresAt > Date.now() || livePlayerInsightRequests.has(puuid)) return;
+  const task = loadLivePlayerInsight(puuid)
+    .then(insight => {
+      livePlayerInsightCache.set(puuid, { insight, error: "", expiresAt: Date.now() + LIVE_PLAYER_INSIGHT_TTL_MS });
+    })
+    .catch(error => {
+      livePlayerInsightCache.set(puuid, {
+        insight: null,
+        error: error instanceof Error ? error.message : "Could not load public player insights.",
+        expiresAt: Date.now() + 60 * 1000
+      });
+    })
+    .finally(() => livePlayerInsightRequests.delete(puuid));
+  livePlayerInsightRequests.set(puuid, task);
+}
+
+async function getLiveMatchState() {
+  const riotSession = await readValorantOrRiotClientSession();
+  if (!riotSession) {
+    return { status: "client-offline", server: "", queue: "", players: [] };
+  }
+
+  const entitlements = await requestRiotClientJson(riotSession, "/entitlements/v1/token");
+  const selfPuuid = entitlements?.subject;
+  if (typeof selfPuuid !== "string" || !/^[0-9a-f-]{36}$/i.test(selfPuuid)) {
+    throw new Error("Riot Client did not provide the signed-in player ID.");
+  }
+
+  const encodedSelfPuuid = encodeURIComponent(selfPuuid);
+  const [pregameSession, liveSession] = await Promise.all([
+    requestRiotClientJson(riotSession, `/pregame/v1/players/${encodedSelfPuuid}`, { allowNotFound: true }),
+    requestRiotClientJson(riotSession, `/core-game/v1/players/${encodedSelfPuuid}`, { allowNotFound: true })
+  ]);
+  const stage = liveSession ? "in-game" : pregameSession ? "agent-select" : "waiting";
+  const sessionInfo = liveSession || pregameSession;
+  if (!sessionInfo) {
+    return { status: "waiting", server: "", queue: "", players: [] };
+  }
+
+  const matchId = getLiveField(sessionInfo, "MatchID", "matchId", "match_id");
+  if (typeof matchId !== "string" || !/^[a-z0-9-]{1,128}$/i.test(matchId)) {
+    return { status: "waiting", server: "", queue: "", players: [] };
+  }
+  const matchRoute = liveSession ? "/core-game/v1/matches/" : "/pregame/v1/matches/";
+  const match = await requestRiotClientJson(riotSession, `${matchRoute}${encodeURIComponent(matchId)}`, { allowNotFound: true });
+  if (!match) return { status: "waiting", server: "", queue: "", players: [] };
+
+  const assets = await fetchValorantAssets();
+  const rawPlayers = getLiveRawPlayers(match);
+  const internalPlayers = rawPlayers.map(({ player, teamId }, index) => {
+    const identity = getLiveField(player, "PlayerIdentity", "playerIdentity", "player_identity") || {};
+    const puuid = getLiveField(player, "Subject", "subject", "puuid", "PUUID") ||
+      getLiveField(identity, "Subject", "subject", "puuid", "PUUID") || "";
+    const incognito = getLiveField(identity, "Incognito", "incognito") === true ||
+      getLiveField(player, "Incognito", "incognito") === true;
+    const hideAccountLevel = getLiveField(identity, "HideAccountLevel", "hideAccountLevel") === true ||
+      getLiveField(player, "HideAccountLevel", "hideAccountLevel") === true;
+    const agentId = getLiveField(player, "CharacterID", "characterId", "character_id") || "";
+    const agent = assets.agentAssets.get(normalizeAgentAssetKey(agentId));
+    const tierValue = Number(getLiveField(identity, "CompetitiveTier", "competitiveTier") ??
+      getLiveField(player, "CompetitiveTier", "competitiveTier"));
+    const partyId = getLiveField(player, "PartyID", "partyId", "party_id") ||
+      getLiveField(identity, "PartyID", "partyId", "party_id") || "";
+    const accountLevel = Number(getLiveField(identity, "AccountLevel", "accountLevel") ??
+      getLiveField(player, "AccountLevel", "accountLevel"));
+    return {
+      index,
+      puuid: typeof puuid === "string" ? puuid : "",
+      teamId: typeof teamId === "string" ? teamId : "",
+      gameName: incognito ? "" : getLiveField(identity, "GameName", "gameName", "PlayerName", "playerName") || "",
+      tagLine: incognito ? "" : getLiveField(identity, "TagLine", "tagLine", "Tag", "tag") || "",
+      incognito,
+      hideAccountLevel,
+      accountLevel: !hideAccountLevel && Number.isFinite(accountLevel) ? accountLevel : null,
+      agent: agent?.name || "",
+      agentIcon: agent?.icon || "",
+      localRank: assets.rankTiers.get(tierValue) || (tierValue > 0 ? `Tier ${tierValue}` : "Unranked"),
+      localRankIcon: assets.rankAssets.get((assets.rankTiers.get(tierValue) || "").toLowerCase()) || "",
+      partyId: typeof partyId === "string" ? partyId : ""
+    };
+  });
+  const partyCounts = new Map();
+  const partyLabels = new Map();
+  for (const player of internalPlayers) {
+    if (player.partyId) {
+      partyCounts.set(player.partyId, (partyCounts.get(player.partyId) || 0) + 1);
+      if (!partyLabels.has(player.partyId)) partyLabels.set(player.partyId, `Party ${partyLabels.size + 1}`);
+    }
+    if (player.puuid && !player.incognito) queueLivePlayerInsight(player.puuid);
+  }
+
+  const selfInsight = livePlayerInsightCache.get(selfPuuid)?.insight;
+  const recentPlayerIds = new Set(selfInsight?.recentPlayerIds || []);
+  const players = internalPlayers.map(player => {
+    const cached = player.puuid ? livePlayerInsightCache.get(player.puuid) : null;
+    const insight = cached?.insight;
+    const gameName = player.gameName || insight?.name || "";
+    const tagLine = player.tagLine || insight?.tag || "";
+    return {
+      id: `live-player-${player.index}`,
+      name: player.incognito ? "Hidden player" : gameName
+        ? [gameName, tagLine].filter(Boolean).join("#")
+        : `Player ${player.index + 1}`,
+      isSelf: player.puuid === selfPuuid,
+      teamId: player.teamId,
+      agent: player.agent || "Selecting agent",
+      agentIcon: player.agentIcon,
+      rank: insight?.currentRank || player.localRank,
+      rankIcon: insight?.currentRankIcon || player.localRankIcon,
+      peakRank: insight?.peakRank || "",
+      peakRankIcon: insight?.peakRankIcon || "",
+      accountLevel: player.hideAccountLevel ? null : insight?.accountLevel ?? player.accountLevel,
+      partySize: player.partyId ? partyCounts.get(player.partyId) || 1 : null,
+      partyLabel: player.partyId ? partyLabels.get(player.partyId) : "",
+      form: insight?.form || null,
+      seenBefore: Boolean(player.puuid && player.puuid !== selfPuuid && recentPlayerIds.has(player.puuid)),
+      smurfWarning: insight?.smurfWarning || "",
+      insightLoading: Boolean(player.puuid && !player.incognito && !insight && !cached?.error),
+      insightError: cached?.error || ""
+    };
+  });
+
+  const gamePodId = getLiveField(match, "GamePodID", "gamePodId", "game_pod_id");
+  const serverRegion = typeof gamePodId === "string"
+    ? /(?:^|\.)(na|eu|ap|kr|latam|br)\d*(?:\.|$)/i.exec(gamePodId)?.[1]?.toUpperCase() || ""
+    : "";
+  const queueId = String(getLiveField(match, "QueueID", "queueId", "queue_id") ||
+    getLiveField(match, "Mode", "mode") || "");
+  const queueNames = {
+    competitive: "Competitive",
+    unrated: "Unrated",
+    swiftplay: "Swiftplay",
+    spikerush: "Spike Rush",
+    deathmatch: "Deathmatch",
+    ggteam: "Team Deathmatch",
+    premier: "Premier"
+  };
+  const mapId = getLiveField(match, "MapID", "mapId", "map_id");
+  const mapName = typeof mapId === "string" ? mapId.split("/").filter(Boolean).pop()?.replace(/_/g, " ") || "" : "";
+  return {
+    status: stage,
+    server: serverRegion ? `${serverRegion} server` : "Server unavailable",
+    queue: queueNames[queueId.toLowerCase()] || queueId || "VALORANT",
+    map: mapName,
+    players
+  };
 }
 
 function getValorantImageUrl(value) {
@@ -1391,6 +1941,7 @@ app.whenReady().then(() => {
   ipcMain.handle("update-state-mark-whats-new-shown", (_event, version) => markWhatsNewShown(version));
   ipcMain.handle("update-state-get-pending-whats-new", () => getPendingWhatsNewVersion());
   ipcMain.handle("fetch-release-notes", (_event, version) => getReleaseNotesForVersion(version));
+  ipcMain.handle("valorant-skins-catalog", () => fetchValorantSkinsCatalog());
   ipcMain.handle("custom-theme-image-load", () => loadCustomThemeImage());
   ipcMain.handle("custom-theme-image-save", (_event, dataUrl) => saveCustomThemeImage(dataUrl));
   ipcMain.handle("custom-theme-image-remove", () => removeCustomThemeImage());
@@ -1415,6 +1966,7 @@ app.whenReady().then(() => {
     }
     return { configured: Boolean(trimmedKey) };
   });
+  ipcMain.handle("live-match-state", () => getLiveMatchState());
   ipcMain.handle("lookup-player-data", async (_event, player) => {
     try {
       return { ok: true, data: await lookupPlayerData(player) };
@@ -1462,7 +2014,7 @@ app.whenReady().then(() => {
   ipcMain.handle("vault-save-entry", (_event, entry) => saveVaultEntry(entry));
   ipcMain.handle("vault-update-entry", (_event, id, entry) => updateVaultEntry(id, entry));
   ipcMain.handle("vault-delete-entry", (_event, id) => deleteVaultEntry(id));
-  ipcMain.handle("vault-reveal-password", (_event, id) => getVaultEntryPassword(id));
+  ipcMain.handle("vault-reveal-password", (_event, { id, passcode }) => getVaultEntryPassword(id, passcode));
   ipcMain.handle("vault-copy-username", (_event, id) => {
     const entry = requireUnlockedVault().entries.find(item => item.id === id);
     if (!entry) throw new Error("Vault item not found.");
@@ -1472,8 +2024,8 @@ app.whenReady().then(() => {
   ipcMain.handle("open-riot-client", (_event, entryId) => openAndFillRiotClient(entryId));
   ipcMain.handle("vault-export-backup", () => exportVaultBackup());
   ipcMain.handle("vault-restore-backup", (_event, values) => restoreVaultBackup(values));
-  ipcMain.handle("vault-copy-password", (_event, id) => {
-    const password = getVaultEntryPassword(id);
+  ipcMain.handle("vault-copy-password", async (_event, { id, passcode }) => {
+    const password = await getVaultEntryPassword(id, passcode);
     clipboard.writeText(password);
     const clearTimer = setTimeout(() => {
       if (clipboard.readText() === password) clipboard.clear();

@@ -2,13 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data: blob: https://media.valorant-api.com; worker-src 'self' blob:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data: blob: https://media.valorant-api.com; media-src 'self' https://valorant.dyn.riotcdn.net; worker-src 'self' blob:;">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KEEPER</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="player-stats.css">
   <link rel="stylesheet" href="vault-ui.css">
   <link rel="stylesheet" href="design-system.css">
+  <link rel="stylesheet" href="skins.css">
+  <link rel="stylesheet" href="live-match.css">
+  <link rel="stylesheet" href="typography.css">
 </head>
 <body>
   <header id="window-titlebar" class="window-titlebar">
@@ -71,15 +74,18 @@
         <div class="brand-mark"><img src="../assets/keeper.png" alt=""></div>
         <div><div class="brand-name">KEEPER</div><div class="brand-sub">VALORANT COMPANION</div></div>
       </div>
-      <div class="nav-label">WORKSPACE</div>
+      <div class="nav-label">VALORANT</div>
       <button class="nav-item active" data-page="overview"><span>◫</span> Player Stats</button>
-      <button class="nav-item" data-page="matches"><span>▤</span> Match history</button>
       <button class="nav-item" data-page="compare"><span>⇄</span> Performance</button>
-      <button class="nav-item" data-page="vault"><span>▣</span> Vault</button>
+      <button class="nav-item" data-page="matches"><span>▤</span> Match history</button>
+      <button class="nav-item" data-page="live"><span class="live-nav-icon" aria-hidden="true">●</span> Live Match</button>
+      <div class="nav-label nav-label-tools">TOOLS</div>
+      <button class="nav-item" data-page="vault"><span>▣</span> Account vault</button>
+      <button class="nav-item" data-page="skins"><span>✦</span> Skins</button>
+      <button class="nav-item" data-page="settings"><span>⚙</span> Settings</button>
       <div class="sidebar-bottom">
         <div class="profile-mini"><div class="avatar" id="sidebar-profile-avatar">F</div><div><b id="sidebar-profile-name">Profile</b><small>PERSONAL VAULT</small></div><span class="online-dot"></span></div>
         <button id="switch-profile-btn" class="nav-item" type="button"><span>↔</span> Switch profile</button>
-        <button class="nav-item" data-page="settings"><span>⚙</span> Settings</button>
       </div>
     </aside>
 
@@ -101,7 +107,6 @@
         </form>
         <section class="panel overview-snapshot">
           <div class="player-hero" id="player-hero">
-
             <div class="player-identity">
               <div class="player-card-avatar"><img id="player-card-avatar" alt="" hidden><span id="player-card-placeholder">FT</span></div>
               <div class="player-identity-copy">
@@ -127,8 +132,11 @@
             </div>
             <div class="player-level" id="player-level">LEVEL —</div>
           </div>
+        </section>
+
+        <section class="panel overview-performance" aria-labelledby="overview-performance-title">
           <div class="player-performance-heading">
-            <div><h2>Performance</h2><p id="overview-snapshot-caption">Search for a player to calculate recent performance.</p></div>
+            <div><h2 id="overview-performance-title">Performance</h2><p id="overview-snapshot-caption">Search for a player to calculate recent performance.</p></div>
             <label class="performance-scope-control">CALCULATE BY
               <select id="analytics-scope" class="filter-select" aria-label="Performance calculation period">
                 <option value="10matches">Last 10 matches</option>
@@ -137,57 +145,144 @@
               </select>
             </label>
           </div>
-          <div class="performance-primary-grid">
-            <article class="performance-primary-card performance-win-card">
-              <div class="performance-card-label">WIN RATE</div>
-              <div class="performance-win-content">
-                <div class="winrate-ring" id="winrate-ring" role="img" aria-label="Win rate unavailable">
-                  <div class="winrate-ring-center"><b id="snapshot-win-rate">—</b><span>WIN RATE</span></div>
-                </div>
-                <div class="record-counts"><b id="snapshot-wins">— <span>WON</span></b><b id="snapshot-losses">— <span>LOST</span></b><small id="snapshot-draws">No draws</small></div>
-              </div>
-            </article>
-            <article class="performance-primary-card"><span class="performance-card-label">K/D RATIO</span><b class="performance-card-value" id="snapshot-kd">—</b><span class="performance-card-foot">Kills / deaths</span></article>
-            <article class="performance-primary-card"><span class="performance-card-label">AVERAGE COMBAT SCORE</span><b class="performance-card-value" id="snapshot-acs">—</b><span class="performance-card-foot">Per round</span></article>
-            <article class="performance-primary-card"><span class="performance-card-label">HEADSHOT</span><b class="performance-card-value" id="snapshot-headshots">—</b><span class="performance-card-foot">Of shots hit</span></article>
+          <div class="overview-metric-grid">
+            <article class="overview-metric-card"><span>K/D RATIO</span><b id="snapshot-kd">—</b><small>Kills / deaths</small></article>
+            <article class="overview-metric-card"><span>WIN RATE</span><b id="snapshot-win-rate">—</b><small>Recent matches</small></article>
+            <article class="overview-metric-card"><span>HEADSHOT</span><b id="snapshot-headshots">—</b><small>Of shots hit</small></article>
+            <article class="overview-metric-card"><span>AVERAGE ACS</span><b id="snapshot-acs">—</b><small>Combat score</small></article>
+            <article class="overview-metric-card"><span>KAD RATIO</span><b id="snapshot-kad">—</b><small>Kills + assists / deaths</small></article>
+            <article class="overview-metric-card"><span>W / L RECORD</span><b id="snapshot-record">—</b><small>In this period</small></article>
           </div>
-          <div class="performance-secondary-grid">
-            <div class="performance-secondary-stat"><span>KAD RATIO</span><b id="snapshot-kad">—</b></div>
-            <div class="performance-secondary-stat"><span>WINS</span><b id="snapshot-wins-total">—</b></div>
-            <div class="performance-secondary-stat"><span>KILLS</span><b id="snapshot-kills">—</b></div>
-            <div class="performance-secondary-stat"><span>DEATHS</span><b id="snapshot-deaths">—</b></div>
-            <div class="performance-secondary-stat"><span>ASSISTS</span><b id="snapshot-assists">—</b></div>
-            <div class="performance-secondary-stat"><span>DDA / ROUND</span><b id="snapshot-dda">—</b></div>
-          </div>
-          <div class="most-played-heading"><h3>Most played</h3><span id="snapshot-record">—</span></div>
-          <div class="agent-showcase" id="agent-showcase"></div>
-          <div id="agent-stats-empty" class="agent-showcase-empty">Search a player to see their most-played agents.</div>
         </section>
 
-        <div class="overview-breakdowns">
-          <section class="panel breakdown-panel">
-            <div class="panel-head"><div><h2>Accuracy</h2><p>Hit distribution from recent matches</p></div></div>
-            <div class="accuracy-breakdown" id="accuracy-breakdown"></div>
-            <p id="accuracy-empty" class="breakdown-empty">Search a player to see hit accuracy.</p>
-          </section>
-          <section class="panel breakdown-panel role-breakdown-panel">
-            <div class="panel-head"><div><h2>Roles</h2><p>Agent-role performance from recent matches</p></div></div>
-            <div class="breakdown-table-wrap"><table class="breakdown-table"><thead><tr><th>ROLE</th><th>MATCHES</th><th>WIN %</th><th>K/D</th><th>ACS</th></tr></thead><tbody id="role-stats-table"></tbody></table></div>
-            <p id="role-stats-empty" class="breakdown-empty">Role details are not available for these matches.</p>
-          </section>
-        </div>
-
-        <div class="content-grid">
-          <section class="panel recent-panel">
-            <div class="panel-head"><div><h2>Recent matches</h2><p id="overview-matches-caption">Search for a player to load their latest matches.</p></div><button class="text-button" data-goto="matches">View all ↗</button></div>
-            <div class="match-list" id="recent-matches"></div>
-          </section>
+        <div class="overview-dashboard">
+          <div class="overview-main-column">
+            <section class="panel recent-panel">
+              <div class="panel-head"><div><h2>Recent matches</h2><p id="overview-matches-caption">Search for a player to load their latest matches.</p></div><button class="text-button" data-goto="matches">View all ↗</button></div>
+              <div class="match-list" id="recent-matches"></div>
+            </section>
+            <section class="panel overview-trend-panel">
+              <div class="panel-head"><div><h2>ACS trend</h2><p>Actual combat score from recent matches</p></div><span class="muted-tag" id="overview-trend-count">NO MATCH DATA</span></div>
+              <div class="overview-trend-chart" id="overview-acs-chart" role="img" aria-label="Average combat score trend"></div>
+              <div class="overview-trend-labels"><span>Older matches</span><span>Most recent</span></div>
+            </section>
+          </div>
+          <aside class="overview-sidebar">
+            <section class="panel overview-side-panel">
+              <div class="panel-head"><div><h2>Top agents</h2><p>By matches in this period</p></div></div>
+              <div class="agent-showcase" id="agent-showcase"></div>
+              <p id="agent-stats-empty" class="agent-showcase-empty">Search a player to see their most-played agents.</p>
+            </section>
+            <section class="panel overview-side-panel overview-quick-panel">
+              <div class="panel-head"><div><h2>Quick access</h2><p>Your encrypted account vault</p></div><span class="vault-quick-icon" aria-hidden="true">▣</span></div>
+              <p>Open your saved accounts and launch Riot sign-in from one place.</p>
+              <button class="button button-primary" type="button" data-goto="vault">Open vault</button>
+            </section>
+            <section class="panel breakdown-panel overview-side-panel">
+              <div class="panel-head"><div><h2>Accuracy</h2><p>Hit distribution</p></div></div>
+              <div class="accuracy-breakdown" id="accuracy-breakdown"></div>
+              <p id="accuracy-empty" class="breakdown-empty">Search a player to see hit accuracy.</p>
+            </section>
+            <section class="panel breakdown-panel role-breakdown-panel overview-side-panel">
+              <div class="panel-head"><div><h2>Roles</h2><p>Match results by agent role</p></div></div>
+              <div class="breakdown-table-wrap"><table class="breakdown-table"><thead><tr><th>ROLE</th><th>MATCHES</th><th>WIN %</th><th>K/D</th><th>ACS</th></tr></thead><tbody id="role-stats-table"></tbody></table></div>
+              <p id="role-stats-empty" class="breakdown-empty">Role details are not available for these matches.</p>
+            </section>
+          </aside>
         </div>
         <div class="notice"><span>ⓘ</span><div><b>Data sources</b><p>Rank and up to 30 recent matches across modes are fetched from HenrikDev. Performance can be calculated from the last 10, 20, or 30 loaded matches. Rank emblems, agent portraits, and player-card artwork use public VALORANT API assets. Unavailable weapon, KAST, or teammate stats are not estimated.</p></div></div>
       </section>
 
+      <section id="skins-page" class="page skins-page">
+        <div class="section-intro skins-intro">
+          <div><h1>All skins</h1><p>Browse VALORANT weapon skins. Select a skin to see its variants and upgrades.</p></div>
+          <div class="skins-view-switch" role="group" aria-label="Skin collection view">
+            <button type="button" class="skins-view-option active" data-skin-view="all" aria-pressed="true">All skins</button>
+            <button type="button" class="skins-view-option" data-skin-view="owned" aria-pressed="false">My collection</button>
+          </div>
+        </div>
+        <div class="skins-summary" aria-live="polite">
+          <span id="skins-total-count" class="muted-tag">LOADING SKINS</span>
+          <span class="skins-summary-pill"><span aria-hidden="true">♥</span> <b id="skins-favorite-count">0</b> favourites</span>
+          <span class="skins-summary-pill"><span aria-hidden="true">✓</span> <b id="skins-owned-count">0</b> owned</span>
+        </div>
+        <div class="panel skins-toolbar">
+          <div class="skins-search-row">
+            <label class="skins-search-wrap"><span aria-hidden="true">⌕</span><input id="skins-search" type="search" autocomplete="off" placeholder="Search skins — Reaver, Prime, Kuronami..." aria-label="Search skins"></label>
+            <label class="skins-sort-label"><span class="visually-hidden">Sort skins</span>
+              <select id="skins-sort" class="filter-select" aria-label="Sort skins">
+                <option value="weapon">Sort by weapon</option>
+                <option value="name">Sort by name</option>
+                <option value="price-high">Price: high to low</option>
+                <option value="price-low">Price: low to high</option>
+              </select>
+            </label>
+          </div>
+          <div id="skins-category-filters" class="skins-filter-row" role="group" aria-label="Weapon category">
+            <button class="skin-filter-chip active" type="button" data-skin-category="all" aria-pressed="true">All weapons</button>
+            <button class="skin-filter-chip" type="button" data-skin-category="Sidearms" aria-pressed="false">Sidearms</button>
+            <button class="skin-filter-chip" type="button" data-skin-category="SMGs" aria-pressed="false">SMGs</button>
+            <button class="skin-filter-chip" type="button" data-skin-category="Shotguns" aria-pressed="false">Shotguns</button>
+            <button class="skin-filter-chip" type="button" data-skin-category="Rifles" aria-pressed="false">Rifles</button>
+            <button class="skin-filter-chip" type="button" data-skin-category="Snipers" aria-pressed="false">Snipers</button>
+            <button class="skin-filter-chip" type="button" data-skin-category="Machine guns" aria-pressed="false">Machine guns</button>
+            <button class="skin-filter-chip" type="button" data-skin-category="Melee" aria-pressed="false">Melee</button>
+          </div>
+          <div id="skins-weapon-filters" class="skins-filter-row skins-weapon-filters" role="group" aria-label="Weapon"></div>
+          <div class="skins-filter-footer">
+            <div id="skins-tier-filters" class="skins-filter-row skins-tier-filters" role="group" aria-label="Skin tier">
+              <button class="skin-filter-chip active" type="button" data-skin-tier="all" aria-pressed="true">All tiers</button>
+              <button class="skin-filter-chip" type="button" data-skin-tier="Select" aria-pressed="false"><i class="skin-tier-dot tier-select"></i>Select</button>
+              <button class="skin-filter-chip" type="button" data-skin-tier="Deluxe" aria-pressed="false"><i class="skin-tier-dot tier-deluxe"></i>Deluxe</button>
+              <button class="skin-filter-chip" type="button" data-skin-tier="Premium" aria-pressed="false"><i class="skin-tier-dot tier-premium"></i>Premium</button>
+              <button class="skin-filter-chip" type="button" data-skin-tier="Exclusive" aria-pressed="false"><i class="skin-tier-dot tier-exclusive"></i>Exclusive</button>
+              <button class="skin-filter-chip" type="button" data-skin-tier="Ultra" aria-pressed="false"><i class="skin-tier-dot tier-ultra"></i>Ultra</button>
+            </div>
+            <div class="skins-quick-filters">
+              <button class="skins-quick-filter" id="skins-owned-filter" type="button" aria-pressed="false"><span></span> Owned</button>
+              <button class="skins-quick-filter" id="skins-favorites-filter" type="button" aria-pressed="false"><span></span> Favourites</button>
+            </div>
+          </div>
+        </div>
+        <div class="skins-status-row"><p id="skins-status" class="form-status" role="status" aria-live="polite">Skins load from the VALORANT API.</p><button id="skins-retry" class="text-button" type="button" hidden>Try again</button></div>
+        <div id="skins-grid" class="skins-grid" aria-live="polite"></div>
+        <div id="skins-empty" class="panel skins-empty" hidden><h2>No skins found</h2><p>Try changing your search or filters.</p></div>
+        <div class="skins-load-more-wrap"><button id="skins-load-more" class="button button-secondary" type="button" hidden>Load more skins</button></div>
+      </section>
+      <dialog id="skin-detail-dialog" class="vault-dialog skin-detail-dialog" aria-labelledby="skin-detail-title">
+        <div class="skin-dialog-shell">
+          <div class="skin-dialog-head">
+            <div><h2 id="skin-detail-title"></h2><div class="skin-detail-tags"><span id="skin-detail-weapon"></span><span id="skin-detail-tier"></span></div></div>
+            <button id="skin-detail-close" class="icon-button" type="button" aria-label="Close skin details" title="Close">×</button>
+          </div>
+          <div class="skin-dialog-body">
+            <div class="skin-detail-main">
+              <div class="skin-detail-preview">
+                <img id="skin-detail-image" alt="">
+                <div id="skin-detail-image-placeholder" class="skin-preview-placeholder" hidden>VALORANT SKIN</div>
+                <video id="skin-detail-video" controls playsinline preload="none" hidden></video>
+                <button id="skin-detail-video-close" class="skin-video-close" type="button" hidden>× Close preview</button>
+              </div>
+              <section class="skin-variants-panel">
+                <h3>Variants <span id="skin-variant-count"></span></h3>
+                <div id="skin-variant-options" class="skin-variant-options"></div>
+              </section>
+            </div>
+            <aside class="skin-detail-aside">
+              <div class="skin-detail-price"><span>Typical store price</span><strong id="skin-detail-price">—</strong><small>Individual skin prices can vary by edition.</small></div>
+              <button id="skin-detail-favorite" class="button button-primary skin-detail-favorite" type="button">Add to favourites</button>
+              <button id="skin-detail-owned" class="button button-secondary skin-detail-owned" type="button">Mark as owned</button>
+              <section class="skin-levels-panel">
+                <h3>Upgrades <span id="skin-level-count">0 levels</span></h3>
+                <div id="skin-level-list" class="skin-level-list"></div>
+              </section>
+            </aside>
+          </div>
+        </div>
+      </dialog>
+
       <section id="matches-page" class="page">
-        <div class="section-intro matches-intro"><div><h1>Recent Matches</h1><p id="matches-caption">Search a Riot ID on Player Stats to load their recent matches.</p></div></div>
+        <div class="section-intro matches-intro"><div><h1>Match History</h1><p id="matches-caption">Search a Riot ID on Player Stats to load their recent matches.</p></div></div>
         <div class="panel match-filters" aria-label="Filter matches">
           <label>RESULT<select class="filter-select" id="match-filter"><option value="all">All results</option><option value="win">Wins</option><option value="loss">Losses</option><option value="draw">Draws</option></select></label>
           <label>MODE<select class="filter-select" id="match-mode-filter"><option value="all">All modes</option></select></label>
@@ -198,7 +293,7 @@
         </div>
         <div class="panel table-panel">
           <div id="matches-status" class="matches-status" role="status" aria-live="polite">No player selected.</div>
-          <div class="table-wrap"><table><thead><tr><th>RESULT</th><th>MODE</th><th>MAP</th><th>AGENT</th><th>SCORE</th><th>K / D / A</th><th>ACS</th><th>HS%</th></tr></thead><tbody id="match-table"></tbody></table></div>
+          <div id="match-history-list" class="match-history-list"></div>
           <div class="match-pagination">
             <label>SHOW
               <select id="match-page-size" class="filter-select" aria-label="Matches per page">
@@ -213,6 +308,15 @@
               <button id="match-page-next" class="button button-secondary" type="button">Next</button>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section id="live-page" class="page live-match-page" aria-labelledby="live-page-heading">
+        <div class="live-coming-soon panel">
+          <span class="live-coming-soon-icon" aria-hidden="true">◉</span>
+          <span class="live-coming-soon-label">LIVE MATCH</span>
+          <h1 id="live-page-heading">Coming Soon</h1>
+          <p>Live Match is under development. Check back in a future update.</p>
         </div>
       </section>
 
@@ -257,22 +361,40 @@
       </section>
 
       <dialog id="change-vault-passcode-dialog" class="vault-dialog"><form id="change-vault-passcode-form"><div class="vault-dialog-head"><h2>Change master passcode</h2><button id="cancel-passcode-change" class="icon-button" type="button" title="Close" aria-label="Close">×</button></div><label>Current passcode<input id="current-vault-passcode" name="currentPasscode" type="password" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9A-Za-z]{6}" autocomplete="current-password" required></label><label>New six-digit passcode<input id="new-vault-passcode" name="newPasscode" type="password" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" autocomplete="new-password" required></label><label>Confirm new passcode<input id="confirm-vault-passcode" name="confirmation" type="password" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" autocomplete="new-password" required></label><p class="vault-warning">Your current passcode is required. All saved accounts are re-encrypted with the new code.</p><p id="passcode-change-status" class="form-status" role="status" aria-live="polite"></p><button class="button button-secondary" type="submit">Save new passcode</button></form></dialog>
+      <dialog id="vault-reauth-dialog" class="vault-dialog" aria-labelledby="vault-reauth-title"><form id="vault-reauth-form" autocomplete="off"><div class="vault-dialog-head"><div><p class="vault-dialog-kicker">SECURITY CHECK</p><h2 id="vault-reauth-title">Confirm your passcode</h2></div></div><p id="vault-reauth-description">Enter your master passcode to continue.</p><label>Master passcode<input id="vault-reauth-passcode" type="password" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" autocomplete="current-password" required></label><p id="vault-reauth-status" class="form-status" role="status" aria-live="polite"></p><div class="vault-reauth-actions"><button id="cancel-vault-reauth" class="button button-secondary" type="button">Cancel</button><button id="vault-reauth-submit" class="button button-primary" type="submit">Confirm</button></div></form></dialog>
 
-      <section id="vault-page" class="page">
-        <div class="section-intro"><div><h1>Personal Vault</h1><p>Encrypted account details, stored on this device.</p></div></div>
+      <section id="vault-page" class="page" aria-labelledby="vault-page-title">
+        <div class="vault-page-head">
+          <div>
+            <p class="vault-page-eyebrow">SECURE ACCOUNT VAULT <span aria-hidden="true">·</span> <span id="vault-active-profile-name">PERSONAL PROFILE</span></p>
+            <h1 id="vault-page-title">The Vault</h1>
+            <p>Keep your account details protected and ready when you need them.</p>
+          </div>
+          <div class="vault-page-actions">
+            <button id="vault-switch-profile-btn" class="button button-secondary" type="button">↔ <span>Switch profile</span></button>
+            <button id="add-vault-entry-btn" class="button button-primary vault-new-button" type="button"><span aria-hidden="true">+</span> Add account</button>
+          </div>
+        </div>
+        <div class="vault-security-summary">
+          <div class="vault-security-copy">
+            <span class="vault-security-icon" aria-hidden="true">✓</span>
+            <div><b>Saved only on this PC</b><span>Encrypted with your vault passcode. Nothing is uploaded.</span></div>
+          </div>
+          <div class="vault-summary-count" aria-label="Saved account count"><b id="vault-entry-count">0</b><span>ACCOUNTS</span></div>
+        </div>
         <div class="vault-workspace">
-          <section id="vault-account-list-panel" class="panel vault-account-list-panel">
-            <div class="vault-account-list-head"><div><h2>All accounts</h2><p>Saved on this device</p></div><button id="add-vault-entry-btn" class="button button-primary vault-new-button" type="button"><span>+</span> New</button></div>
-            <label class="vault-search-wrap"><span aria-hidden="true">⌕</span><input id="vault-account-search" class="vault-account-search" type="search" placeholder="Search accounts" aria-label="Search accounts"><span class="vault-search-shortcut">⌕</span></label>
-            <div class="vault-list-meta"><span id="vault-entry-count" class="muted-tag">0 ITEMS</span><span>Most recent</span></div>
+          <section id="vault-account-list-panel" class="panel vault-account-list-panel" aria-labelledby="vault-account-list-title">
+            <div class="vault-account-list-head"><div><h2 id="vault-account-list-title">Saved accounts</h2><p>Private to this vault profile</p></div><span class="vault-local-tag"><i aria-hidden="true"></i> LOCAL ENCRYPTION</span></div>
+            <label class="vault-search-wrap"><span aria-hidden="true">⌕</span><input id="vault-account-search" class="vault-account-search" type="search" placeholder="Search nicknames or usernames" aria-label="Search saved accounts"><span class="vault-search-shortcut" aria-hidden="true">⌕</span></label>
+            <div class="vault-list-meta"><span class="muted-tag">YOUR ACCOUNTS</span><span>Favorites appear first</span></div>
+            <p id="vault-favorites-status" class="vault-favorites-status" role="status" aria-live="polite" hidden></p>
             <div id="vault-entry-list" class="vault-entry-list"></div>
             <div class="vault-export-footer"><div><b>Encrypted backup</b><span>Keep a passcode-protected copy of this vault.</span></div><button id="vault-export-btn" class="button button-secondary vault-export-button" type="button">Export backup</button></div>
           </section>
-          <section id="vault-account-detail" class="panel vault-account-detail" hidden><div class="vault-detail-head"><div id="vault-detail-service-mark" class="service-mark">R</div><div><h2 id="vault-detail-label"></h2><p>Saved account</p></div><span class="vault-saved-badge"><i></i> Saved</span></div><div class="vault-detail-fields"><div><span>USERNAME</span><b id="vault-detail-username"></b><button id="copy-vault-username" class="icon-button" type="button" title="Copy username" aria-label="Copy username">⧉</button></div><div><span>PASSWORD</span><b id="vault-detail-password">••••••••</b><button id="reveal-vault-detail-password" class="icon-button" type="button" title="Reveal for 15 seconds" aria-label="Reveal password">◉</button><button id="copy-vault-detail-password" class="icon-button" type="button" title="Copy password" aria-label="Copy password">⧉</button></div><p id="vault-detail-notes"></p></div><div class="vault-detail-actions"><button id="edit-vault-account" class="button button-secondary" type="button">Edit account</button><button id="open-riot-client" class="button button-primary" type="button">Open &amp; fill Riot Client</button><button id="delete-vault-account" class="text-button danger" type="button">Delete account</button></div><p id="vault-entry-status" class="form-status" role="status" aria-live="polite"></p></section>
-          <section id="vault-empty-detail" class="panel vault-empty-detail"><h2>Select an account</h2><p>Choose an account from the list or add a new one.</p></section>
+          <section id="vault-account-detail" class="panel vault-account-detail" aria-labelledby="vault-detail-label" hidden><div class="vault-detail-head"><div id="vault-detail-service-mark" class="service-mark">R</div><div><h2 id="vault-detail-label"></h2><p>Saved account details</p></div><span class="vault-saved-badge"><i></i> Saved locally</span></div><div class="vault-detail-fields"><div><span>USERNAME</span><b id="vault-detail-username"></b><button id="copy-vault-username" class="icon-button" type="button" title="Copy username" aria-label="Copy username">⧉</button></div><div><span>PASSWORD</span><b id="vault-detail-password">••••••••</b><button id="reveal-vault-detail-password" class="icon-button" type="button" title="Reveal for 15 seconds" aria-label="Reveal password">◉</button><button id="copy-vault-detail-password" class="icon-button" type="button" title="Copy password" aria-label="Copy password">⧉</button></div><p id="vault-detail-notes"></p></div><div class="vault-detail-actions"><button id="open-riot-client" class="button button-primary" type="button">Open &amp; fill Riot Client</button><button id="delete-vault-account" class="text-button danger" type="button">Delete account</button></div><p id="vault-entry-status" class="form-status" role="status" aria-live="polite"></p></section>
         </div>
-        <dialog id="vault-entry-dialog" class="vault-dialog"><form id="vault-entry-form" class="vault-entry-form"><div class="vault-dialog-head"><h2 id="vault-entry-dialog-title">Add account</h2><button id="vault-cancel-entry" class="icon-button" type="button" title="Close" aria-label="Close">×</button></div><label>Account label<input name="label" maxlength="80" autocomplete="off" required placeholder="Riot Games"></label><label>Username or email<input name="username" maxlength="256" autocomplete="off" required></label><label>Password<input name="password" type="password" maxlength="4096" autocomplete="new-password" required></label><label>Notes<textarea name="notes" maxlength="2000" rows="3" placeholder="Optional account notes"></textarea></label><p id="vault-dialog-status" class="form-status" role="status" aria-live="polite"></p><button id="vault-entry-submit" class="button button-secondary" type="submit">Save encrypted account</button></form></dialog>
-        <div class="notice"><span>ⓘ</span><div><b>Local vault only</b><p>Open &amp; Fill may sign out an existing session when Riot exposes a named logout control, populate sign-in fields, select Stay signed in, and submit. Complete any 2FA manually. The vault does not sync to Google.</p></div></div>
+        <dialog id="vault-entry-dialog" class="vault-dialog"><form id="vault-entry-form" class="vault-entry-form" aria-describedby="vault-entry-security-hint"><div class="vault-dialog-head"><div><p class="vault-dialog-kicker">PRIVATE TO THIS DEVICE</p><h2 id="vault-entry-dialog-title">Add account</h2></div><button id="vault-cancel-entry" class="icon-button" type="button" title="Close" aria-label="Close">×</button></div><label class="vault-entry-field">Account nickname<input name="label" maxlength="80" autocomplete="off" required placeholder="e.g. Main account"></label><label class="vault-entry-field">Sign-in username or email<input name="username" maxlength="256" autocomplete="off" required placeholder="Your login name"><small>The sign-in name you use in the Riot Client.</small></label><label class="vault-entry-field vault-entry-password-field">Password<input name="password" type="password" maxlength="4096" autocomplete="new-password" required></label><label class="vault-entry-field vault-entry-notes-field">Notes<textarea name="notes" maxlength="2000" rows="3" placeholder="Optional account notes"></textarea></label><p id="vault-entry-security-hint" class="vault-entry-security-hint">Credentials are encrypted in your local vault. Your password is never sent to KEEPER’s servers.</p><p id="vault-dialog-status" class="form-status" role="status" aria-live="polite"></p><button id="vault-entry-submit" class="button button-primary" type="submit">Save encrypted account</button></form></dialog>
+        <div class="notice vault-security-note"><span>ⓘ</span><div><b>Local vault only</b><p>Open &amp; Fill may sign out an existing session when Riot exposes a named logout control, populate sign-in fields, select Stay signed in, and submit. Complete any 2FA manually. The vault does not sync to Google.</p></div></div>
       </section>
 
       <footer class="footer"><span>KEEPER <b id="footer-version">v0.93.3 (Beta)</b></span><span>UNOFFICIAL COMMUNITY COMPANION · NOT AFFILIATED WITH RIOT GAMES</span></footer>

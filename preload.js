@@ -38,11 +38,13 @@ contextBridge.exposeInMainWorld("frost", {
   clearPendingWhatsNewVersion: () => ipcRenderer.invoke("update-state-clear-pending"),
   markWhatsNewShown: (version) => ipcRenderer.invoke("update-state-mark-whats-new-shown", version),
   fetchReleaseNotesForVersion: (version) => ipcRenderer.invoke("fetch-release-notes", version),
+  getValorantSkinsCatalog: () => ipcRenderer.invoke("valorant-skins-catalog"),
   loadCustomThemeImage: () => ipcRenderer.invoke("custom-theme-image-load"),
   saveCustomThemeImage: (dataUrl) => ipcRenderer.invoke("custom-theme-image-save", dataUrl),
   removeCustomThemeImage: () => ipcRenderer.invoke("custom-theme-image-remove"),
   getHenrikDevStatus: () => ipcRenderer.invoke("henrikdev-status"),
   setHenrikDevApiKey: (apiKey) => ipcRenderer.invoke("set-henrikdev-api-key", apiKey),
+  getLiveMatchState: () => ipcRenderer.invoke("live-match-state"),
   lookupPlayerData: async (player) => {
     const result = await ipcRenderer.invoke("lookup-player-data", player);
     if (!result?.ok) throw new Error(result?.error || "Player lookup failed.");
@@ -60,10 +62,10 @@ contextBridge.exposeInMainWorld("frost", {
   saveVaultEntry: (entry) => ipcRenderer.invoke("vault-save-entry", entry),
   updateVaultEntry: (id, entry) => ipcRenderer.invoke("vault-update-entry", id, entry),
   deleteVaultEntry: (id) => ipcRenderer.invoke("vault-delete-entry", id),
-  revealVaultPassword: (id) => ipcRenderer.invoke("vault-reveal-password", id),
+  revealVaultPassword: (id, passcode) => ipcRenderer.invoke("vault-reveal-password", { id, passcode }),
   copyVaultUsername: (id) => ipcRenderer.invoke("vault-copy-username", id),
   openRiotClient: (entryId) => ipcRenderer.invoke("open-riot-client", entryId),
   exportVaultBackup: () => ipcRenderer.invoke("vault-export-backup"),
   restoreVaultBackup: (passcode) => ipcRenderer.invoke("vault-restore-backup", passcode),
-  copyVaultPassword: (id) => ipcRenderer.invoke("vault-copy-password", id)
+  copyVaultPassword: (id, passcode) => ipcRenderer.invoke("vault-copy-password", { id, passcode })
 });

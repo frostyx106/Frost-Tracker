@@ -211,6 +211,10 @@ h1, h2, h3, h4 {
   color: color-mix(in srgb, var(--muted) 88%, var(--text));
 }
 
+.nav-label-tools {
+  margin-top: 18px;
+}
+
 .nav-item {
   height: 42px;
   gap: 11px;
@@ -1151,6 +1155,7 @@ body[data-theme-mode="light"] .update-dialog::backdrop {
     transition-duration: .01ms !important;
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
     scroll-behavior: auto !important;
   }
 }
@@ -1943,8 +1948,8 @@ body[data-theme-mode="dark"] .window-titlebar {
 .window-titlebar-brand {
   font-family: var(--font);
   font-size: 12px;
-  font-weight: 650;
-  letter-spacing: .04em;
+  font-weight: 750;
+  letter-spacing: .14em;
 }
 
 .window-titlebar-icon {
@@ -2576,6 +2581,86 @@ body[data-theme] .vault-account-row:hover {
   }
 }
 
+@keyframes keeper-content-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(9px) scale(.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.page.active .overview-metric-card,
+.page.active .overview-match-row,
+.page.active .stat-card,
+.page.active .agent-showcase-item,
+.page.active .skin-card {
+  animation: keeper-content-arrive 360ms var(--ease) both;
+}
+
+.page.active .overview-metric-card:nth-child(2),
+.page.active .stat-card:nth-child(2),
+.page.active .agent-showcase-item:nth-child(2),
+.page.active .skin-card:nth-child(4n + 2) {
+  animation-delay: 45ms;
+}
+
+.page.active .overview-metric-card:nth-child(3),
+.page.active .stat-card:nth-child(3),
+.page.active .agent-showcase-item:nth-child(3),
+.page.active .skin-card:nth-child(4n + 3) {
+  animation-delay: 90ms;
+}
+
+.page.active .overview-metric-card:nth-child(4),
+.page.active .stat-card:nth-child(4),
+.page.active .agent-showcase-item:nth-child(4),
+.page.active .skin-card:nth-child(4n) {
+  animation-delay: 135ms;
+}
+
+.page.active .overview-metric-card:nth-child(5),
+.page.active .overview-match-row:nth-child(3),
+.page.active .skin-card:nth-child(4n + 1):not(:first-child) {
+  animation-delay: 180ms;
+}
+
+.page.active .overview-metric-card:nth-child(6),
+.page.active .overview-match-row:nth-child(4) {
+  animation-delay: 225ms;
+}
+
+.page.active .overview-match-row:nth-child(5) {
+  animation-delay: 270ms;
+}
+
+.overview-metric-card {
+  transition: transform 160ms var(--ease), border-color 160ms var(--ease),
+    box-shadow 160ms var(--ease);
+}
+
+.overview-metric-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--red) 24%, var(--line));
+  box-shadow: var(--shadow-sm);
+}
+
+.overview-match-row {
+  transition: transform 160ms var(--ease), border-color 160ms var(--ease),
+    background-color 160ms var(--ease);
+}
+
+.overview-match-row:hover {
+  transform: translateX(2px);
+}
+
+.button:not(:disabled):hover,
+.icon-button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
 dialog.vault-dialog[open] {
   animation: keeper-dialog-enter 180ms var(--ease) both;
 }
@@ -2619,7 +2704,7 @@ dialog.vault-dialog[open]::backdrop {
 }
 
 .window-titlebar-icon {
-  padding: 2px;
+  padding: 0;
 }
 
 body {
@@ -2765,15 +2850,16 @@ body[data-appearance="glossy"] #settings-page .settings-nav {
   -webkit-backdrop-filter: blur(16px) saturate(145%);
 }
 
-body[data-appearance="normal"] #settings-page .settings-nav {
-  padding: 0 10px 0 0;
-  border: 0;
-  border-right: 1px solid var(--line);
-  border-radius: 0;
-  background: var(--theme-sidebar, var(--bg));
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+@media (min-width: 761px) {
+  body[data-appearance="normal"] #settings-page .settings-nav {
+    padding: 14px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    background: var(--panel);
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 
 body[data-appearance="normal"] #settings-page .settings-tab {
@@ -2792,6 +2878,25 @@ body[data-appearance="normal"] #settings-page .settings-tab:hover {
 
 body[data-appearance="normal"] #settings-page .settings-tab.active {
   border-right-color: var(--red);
+}
+
+@media (max-width: 760px) {
+  body[data-appearance="normal"] #settings-page .settings-nav {
+    padding: 0 0 5px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  body[data-appearance="normal"] #settings-page .settings-tab {
+    border: 0;
+    border-bottom: 2px solid transparent;
+  }
+
+  body[data-appearance="normal"] #settings-page .settings-tab.active {
+    border-bottom-color: var(--red);
+  }
 }
 
 body[data-appearance="glossy"] #settings-page .settings-panel > h2 {
@@ -2847,4 +2952,28 @@ body[data-appearance="glossy"][data-theme="custom"][data-theme-mode="light"] #se
   background: color-mix(in srgb, #f8f9fb 78%, transparent);
   backdrop-filter: blur(16px) saturate(145%);
   -webkit-backdrop-filter: blur(16px) saturate(145%);
+}
+
+.brand-mark {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.brand-mark img {
+  padding: 0;
+  object-fit: contain;
+}
+
+body[data-theme] .brand-mark {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.brand-mark img,
+.window-titlebar-icon,
+.update-dialog-brand img {
+  transform: scale(.9);
 }
