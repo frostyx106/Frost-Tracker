@@ -1,0 +1,331 @@
+/* ─────────────────────────────────────────────────────────────
+   KEEPER — themed live backdrop (dark themes)
+
+   The v0.93.7 "visual refresh" in design-system.css flattened every
+   dark theme to the same neutral #070809 / #0b0c0e and painted it
+   over the sidebar, main area and vault gate, hiding each theme's
+   own gradient. This layer:
+   1. re-tints the dark surface tokens with each theme's hue, and
+   2. lets a fixed, slowly drifting colour backdrop (.live-bg in
+      index.html) show through translucent surfaces.
+
+   Animations are transform-only (compositor work, no repaints) and
+   pause with the other loops when the window is unfocused.
+   ───────────────────────────────────────────────────────────── */
+
+/* ── Per-theme hues ────────────────────────────────────────── */
+body[data-theme="midnight-purple"] {
+  --tint: #8b5cf6;
+  --aura-1: rgba(139, 82, 230, .58);
+  --aura-2: rgba(84, 38, 168, .62);
+  --aura-3: rgba(214, 128, 255, .34);
+  --beam: rgba(205, 170, 255, .085);
+}
+
+body[data-theme="midnight-blue"] {
+  --tint: #3b82f6;
+  --aura-1: rgba(47, 111, 214, .58);
+  --aura-2: rgba(20, 60, 150, .64);
+  --aura-3: rgba(70, 190, 255, .32);
+  --beam: rgba(160, 205, 255, .085);
+}
+
+body[data-theme="forest"] {
+  --tint: #2fa557;
+  --aura-1: rgba(46, 140, 76, .52);
+  --aura-2: rgba(14, 82, 46, .66);
+  --aura-3: rgba(130, 220, 150, .26);
+  --beam: rgba(170, 235, 185, .07);
+}
+
+body[data-theme="maroon"] {
+  --tint: #c0304f;
+  --aura-1: rgba(178, 46, 78, .56);
+  --aura-2: rgba(98, 18, 40, .68);
+  --aura-3: rgba(255, 112, 136, .3);
+  --beam: rgba(255, 185, 196, .075);
+}
+
+body[data-theme="black"] {
+  --tint: #8a8f9a;
+  --aura-1: rgba(120, 126, 140, .2);
+  --aura-2: rgba(70, 74, 84, .32);
+  --aura-3: rgba(205, 210, 220, .09);
+  --beam: rgba(255, 255, 255, .045);
+}
+
+body[data-theme="custom"] {
+  --tint: var(--custom-accent, #8b5cf6);
+  --aura-1: color-mix(in srgb, var(--tint) 52%, transparent);
+  --aura-2: color-mix(in srgb, var(--tint) 45%, rgba(0, 0, 0, .5));
+  --aura-3: color-mix(in srgb, var(--tint) 28%, transparent);
+  --beam: color-mix(in srgb, var(--tint) 10%, transparent);
+}
+
+/* ── Re-tinted dark surfaces (beats the neutral refresh tokens) ── */
+body[data-theme-mode="dark"][data-theme] {
+  --bg: color-mix(in srgb, var(--tint, #888) 9%, #060609);
+  --panel: color-mix(in srgb, var(--tint, #888) 10%, rgba(10, 10, 14, .8));
+  --panel2: color-mix(in srgb, var(--tint, #888) 14%, rgba(16, 16, 21, .86));
+  --line: color-mix(in srgb, var(--tint, #888) 24%, rgba(255, 255, 255, .08));
+  --surface-glass: color-mix(in srgb, var(--tint, #888) 8%, rgba(7, 7, 10, .62));
+}
+
+body[data-theme="black"][data-theme-mode="dark"] {
+  --panel: rgba(17, 18, 21, .84);
+  --panel2: rgba(25, 26, 30, .9);
+  --line: rgba(255, 255, 255, .09);
+}
+
+/* Shell surfaces become translucent so the backdrop shows through */
+body[data-theme-mode="dark"] .app-shell {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
+body[data-theme-mode="dark"] .main,
+body[data-theme-mode="dark"][data-theme] .main,
+body[data-theme-mode="dark"] .vault-gate {
+  background: transparent;
+}
+
+body[data-theme-mode="dark"] .sidebar,
+body[data-theme-mode="dark"][data-theme] .sidebar {
+  background: var(--surface-glass);
+  border-right-color: var(--line);
+}
+
+body[data-theme-mode="dark"][data-theme] .topbar {
+  background: color-mix(in srgb, var(--tint, #888) 10%, rgba(8, 8, 11, .82));
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+
+body[data-theme-mode="dark"] .window-titlebar {
+  border-bottom-color: var(--line);
+  background: color-mix(in srgb, var(--tint, #888) 12%, #09090c);
+}
+
+/* Player hero: tint the base + legibility scrim, keep the card art layer */
+body[data-theme-mode="dark"] #overview-page .player-hero,
+body[data-theme-mode="dark"] #overview-page.active .player-hero {
+  background-color: color-mix(in srgb, var(--tint, #888) 16%, #0b0b10);
+  background-image:
+    radial-gradient(70% 120% at 100% 0%, color-mix(in srgb, var(--tint, #888) 26%, transparent), transparent 70%),
+    linear-gradient(90deg,
+      color-mix(in srgb, var(--tint, #888) 12%, rgba(8, 8, 12, .9)) 0%,
+      color-mix(in srgb, var(--tint, #888) 10%, rgba(8, 8, 12, .72)) 47%,
+      color-mix(in srgb, var(--tint, #888) 8%, rgba(8, 8, 12, .28)) 100%),
+    var(--player-card-art, none);
+}
+
+body[data-theme-mode="dark"] #overview-page.active :is(.player-current-rank, .player-peak-rank) {
+  border-color: color-mix(in srgb, var(--tint, #888) 30%, rgba(255, 255, 255, .1));
+  background: color-mix(in srgb, var(--tint, #888) 10%, rgba(6, 6, 10, .55));
+}
+
+/* ── Light themes: Lilac + Frost get a pastel live backdrop ── */
+body[data-theme="lilac"] {
+  --tint: #8b5cf6;
+  --red: #7a4fd0;
+  --cyan: #6a3fc0;
+  --aura-1: rgba(178, 132, 255, .55);
+  --aura-2: rgba(255, 168, 222, .5);
+  --aura-3: rgba(140, 172, 255, .42);
+  --beam: rgba(255, 255, 255, .5);
+  --theme-primary: linear-gradient(135deg, #a47af5, #7a4fd0 58%, #6236b5);
+  --theme-focus: #7a4fd0;
+  --theme-background: linear-gradient(150deg, #f4eefc, #e6dbf7 45%, #f6e9f5 100%);
+  --hero-gradient: linear-gradient(125deg, #2c1a52 0%, #4b2c86 52%, #7a4fd0 100%);
+}
+
+body[data-theme="frost"] {
+  --tint: #3b9be0;
+  --red: #23709f;
+  --cyan: #1f6a98;
+  --aura-1: rgba(118, 190, 255, .55);
+  --aura-2: rgba(128, 232, 236, .48);
+  --aura-3: rgba(176, 196, 255, .42);
+  --beam: rgba(255, 255, 255, .55);
+  --theme-primary: linear-gradient(135deg, #4fb0ea, #2a80bd 58%, #1d6297);
+  --theme-focus: #23709f;
+  --theme-background: linear-gradient(150deg, #eef6fc, #dbeaf6 45%, #e8f6f8 100%);
+  --hero-gradient: linear-gradient(125deg, #0f2b45 0%, #17507a 52%, #2a80bd 100%);
+}
+
+body:is([data-theme="lilac"], [data-theme="frost"]) .live-bg {
+  display: block;
+}
+
+body:is([data-theme="lilac"], [data-theme="frost"]) .live-bg::after {
+  background: radial-gradient(120% 90% at 50% 40%, transparent 60%, rgba(255, 255, 255, .45));
+}
+
+body:is([data-theme="lilac"], [data-theme="frost"]) .app-shell {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
+body:is([data-theme="lilac"], [data-theme="frost"]) :is(.main, .vault-gate),
+body:is([data-theme="lilac"], [data-theme="frost"])[data-theme] .main {
+  background: transparent;
+}
+
+body:is([data-theme="lilac"], [data-theme="frost"]) .sidebar,
+body:is([data-theme="lilac"], [data-theme="frost"])[data-theme] .sidebar {
+  border-right-color: color-mix(in srgb, var(--tint) 18%, rgba(255, 255, 255, .5));
+  background: linear-gradient(180deg, rgba(255, 255, 255, .62), rgba(255, 255, 255, .38));
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+}
+
+body:is([data-theme="lilac"], [data-theme="frost"])[data-theme] .topbar {
+  border-color: rgba(255, 255, 255, .7);
+  background: rgba(255, 255, 255, .58);
+  box-shadow: 0 1px 2px rgba(30, 20, 60, .05), 0 16px 34px -24px rgba(30, 20, 60, .35);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+
+body:is([data-theme="lilac"], [data-theme="frost"])[data-theme] {
+  --panel: rgba(255, 255, 255, .7);
+  --panel2: rgba(255, 255, 255, .82);
+  --line: color-mix(in srgb, var(--tint) 16%, rgba(255, 255, 255, .6));
+}
+
+body:is([data-theme="lilac"], [data-theme="frost"])[data-theme] :is(.panel, .stat-card, .settings-panel, #settings-page .settings-nav, .vault-gate-panel) {
+  border-color: rgba(255, 255, 255, .78);
+}
+
+body:is([data-theme="lilac"], [data-theme="frost"]) .window-titlebar {
+  border-bottom-color: color-mix(in srgb, var(--tint) 14%, rgba(255, 255, 255, .6));
+  background: rgba(255, 255, 255, .55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Hero card: a rich theme gradient instead of pitch black */
+body:is([data-theme="lilac"], [data-theme="frost"]) #overview-page .player-hero,
+body:is([data-theme="lilac"], [data-theme="frost"]) #overview-page.active .player-hero {
+  background-color: #1b1530;
+  background-image:
+    radial-gradient(60% 140% at 100% 0%, rgba(255, 255, 255, .18), transparent 60%),
+    linear-gradient(90deg, rgba(10, 8, 22, .55) 0%, rgba(10, 8, 22, .25) 55%, transparent 100%),
+    var(--player-card-art, none),
+    var(--hero-gradient);
+}
+
+body:is([data-theme="lilac"], [data-theme="frost"]) #overview-page.active :is(.player-current-rank, .player-peak-rank) {
+  border-color: rgba(255, 255, 255, .2);
+  background: rgba(255, 255, 255, .08);
+}
+
+/* ── The live backdrop ─────────────────────────────────────── */
+.live-bg {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  display: none;
+  overflow: hidden;
+  background: var(--theme-background, var(--bg));
+  pointer-events: none;
+  contain: strict;
+}
+
+body[data-theme-mode="dark"] .live-bg {
+  display: block;
+}
+
+/* A custom wallpaper replaces the live backdrop */
+body[data-theme="custom"][data-has-wallpaper] .live-bg {
+  display: none;
+}
+
+.live-bg > span {
+  position: absolute;
+  will-change: transform;
+}
+
+.live-bg-orb {
+  width: 70vmax;
+  height: 70vmax;
+  border-radius: 50%;
+}
+
+.live-bg .orb-1 {
+  top: -32vmax;
+  left: -18vmax;
+  background: radial-gradient(closest-side, var(--aura-1), transparent);
+  animation: kp-orb-a 26s ease-in-out infinite alternate;
+}
+
+.live-bg .orb-2 {
+  right: -26vmax;
+  bottom: -34vmax;
+  background: radial-gradient(closest-side, var(--aura-2), transparent);
+  animation: kp-orb-b 32s ease-in-out infinite alternate;
+}
+
+.live-bg .orb-3 {
+  top: 18vh;
+  left: 34vw;
+  width: 46vmax;
+  height: 46vmax;
+  background: radial-gradient(closest-side, var(--aura-3), transparent);
+  animation: kp-orb-c 21s ease-in-out infinite alternate;
+}
+
+/* Angled light shards — a nod to the logo's crystal cuts */
+.live-bg-beam {
+  top: -50vh;
+  left: 0;
+  width: 22vmax;
+  height: 200vh;
+  background: linear-gradient(90deg, transparent, var(--beam) 45%, var(--beam) 55%, transparent);
+  transform: translateX(-30vw) rotate(28deg);
+  animation: kp-beam 38s linear infinite;
+}
+
+.live-bg .beam-2 {
+  width: 9vmax;
+  animation-duration: 54s;
+  animation-delay: -27s;
+  opacity: .8;
+}
+
+/* Vignette keeps edges calm and text readable */
+.live-bg::after {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(0, 0, 0, .55));
+  content: "";
+}
+
+@keyframes kp-orb-a {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(14vw, 10vh, 0) scale(1.12); }
+  100% { transform: translate3d(6vw, 22vh, 0) scale(.94); }
+}
+
+@keyframes kp-orb-b {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(-16vw, -12vh, 0) scale(1.1); }
+  100% { transform: translate3d(-6vw, -24vh, 0) scale(.96); }
+}
+
+@keyframes kp-orb-c {
+  0%   { transform: translate3d(0, 0, 0) scale(.9); opacity: .7; }
+  50%  { transform: translate3d(-18vw, 12vh, 0) scale(1.15); opacity: 1; }
+  100% { transform: translate3d(12vw, -8vh, 0) scale(1); opacity: .8; }
+}
+
+@keyframes kp-beam {
+  from { transform: translateX(-40vw) rotate(28deg); }
+  to   { transform: translateX(140vw) rotate(28deg); }
+}
+
+body.is-window-idle .live-bg > span {
+  animation-play-state: paused;
+}

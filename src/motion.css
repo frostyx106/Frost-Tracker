@@ -1,0 +1,334 @@
+/* ─────────────────────────────────────────────────────────────
+   KEEPER — motion layer
+   Loaded last. Builds on the entrance animations in
+   design-system.css. Colours come from the active theme (--red is
+   the theme accent), so every theme gets matching glows.
+
+   Rules:
+   - animate transform/opacity only on large surfaces (no filter,
+     no layout) so glass panels keep their backdrop blur;
+   - looping effects carry .kp-loop semantics via selectors below and
+     pause when the window is unfocused (body.is-window-idle) so the
+     app stays light while a game has focus;
+   - prefers-reduced-motion is handled globally in design-system.css.
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  --ease-out-expo: cubic-bezier(.16, 1, .3, 1);
+  --ease-spring: cubic-bezier(.34, 1.4, .64, 1);
+}
+
+body {
+  --glow: color-mix(in srgb, var(--red) 55%, transparent);
+  --glow-soft: color-mix(in srgb, var(--red) 22%, transparent);
+  --sheen: color-mix(in srgb, white 16%, transparent);
+}
+
+body[data-theme-mode="light"] {
+  --sheen: color-mix(in srgb, white 55%, transparent);
+}
+
+/* ── Keyframes ─────────────────────────────────────────────── */
+@keyframes kp-rise {
+  from { opacity: 0; transform: translateY(14px) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes kp-slide-right {
+  from { opacity: 0; transform: translateX(-18px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes kp-drop {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes kp-pop {
+  0%   { opacity: 0; transform: scale(.6) rotate(-8deg); }
+  60%  { opacity: 1; transform: scale(1.06) rotate(1deg); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes kp-title-in {
+  from { opacity: 0; transform: translateY(8px); letter-spacing: .06em; }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes kp-glint {
+  0%, 72%  { transform: translateX(-130%) skewX(-18deg); }
+  100%     { transform: translateX(130%) skewX(-18deg); }
+}
+
+@keyframes kp-pulse-ring {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent); }
+  100% { box-shadow: 0 0 0 7px transparent; }
+}
+
+@keyframes kp-breathe {
+  0%, 100% { opacity: .55; }
+  50%      { opacity: 1; }
+}
+
+/* ── Vault gate: logo pop, panel rise, profile stagger ─────── */
+/* (the gate's moving backdrop is .live-bg in theme-backdrop.css) */
+
+.vault-gate:not([hidden]) .vault-gate-panel {
+  animation: kp-rise 560ms var(--ease-out-expo) backwards;
+}
+
+.vault-gate:not([hidden]) .vault-gate-panel > .brand-mark {
+  animation: kp-pop 700ms var(--ease-spring) 120ms backwards;
+}
+
+.vault-gate:not([hidden]) .vault-gate-panel > :is(.eyebrow, h1, p) {
+  animation: kp-rise 520ms var(--ease-out-expo) backwards;
+}
+
+.vault-gate:not([hidden]) .vault-gate-panel > .eyebrow { animation-delay: 200ms; }
+.vault-gate:not([hidden]) .vault-gate-panel > h1 { animation-delay: 250ms; }
+.vault-gate:not([hidden]) .vault-gate-panel > p { animation-delay: 300ms; }
+
+.profile-picker-view:not([hidden]) .profile-picker-card {
+  animation: kp-rise 480ms var(--ease-out-expo) backwards;
+}
+
+.profile-picker-card:nth-child(1) { animation-delay: 300ms; }
+.profile-picker-card:nth-child(2) { animation-delay: 350ms; }
+.profile-picker-card:nth-child(3) { animation-delay: 400ms; }
+.profile-picker-card:nth-child(4) { animation-delay: 450ms; }
+.profile-picker-card:nth-child(n + 5) { animation-delay: 500ms; }
+
+.profile-picker-avatar {
+  transition: transform 260ms var(--ease-spring), box-shadow 260ms var(--ease-out-expo);
+}
+
+.profile-picker-card:hover .profile-picker-avatar,
+.profile-picker-card:focus-visible .profile-picker-avatar {
+  transform: scale(1.06);
+  box-shadow: 0 0 0 2px var(--glow), 0 14px 34px -8px var(--glow);
+}
+
+/* ── Unlock intro (app.js adds .is-entering for ~1s) ──────── */
+.app-shell.is-entering .sidebar {
+  animation: kp-slide-right 520ms var(--ease-out-expo) backwards;
+}
+
+.app-shell.is-entering .sidebar .brand-mark {
+  animation: kp-pop 700ms var(--ease-spring) 120ms backwards;
+}
+
+.app-shell.is-entering .sidebar .brand > div:not(.brand-mark),
+.app-shell.is-entering .sidebar .nav-label,
+.app-shell.is-entering .sidebar > .nav-item,
+.app-shell.is-entering .sidebar .sidebar-bottom {
+  animation: kp-slide-right 460ms var(--ease-out-expo) backwards;
+}
+
+.app-shell.is-entering .sidebar .brand > div:not(.brand-mark) { animation-delay: 160ms; }
+.app-shell.is-entering .sidebar .nav-label { animation-delay: 200ms; }
+.app-shell.is-entering .sidebar > .nav-item:nth-of-type(1) { animation-delay: 230ms; }
+.app-shell.is-entering .sidebar > .nav-item:nth-of-type(2) { animation-delay: 265ms; }
+.app-shell.is-entering .sidebar > .nav-item:nth-of-type(3) { animation-delay: 300ms; }
+.app-shell.is-entering .sidebar > .nav-item:nth-of-type(4) { animation-delay: 335ms; }
+.app-shell.is-entering .sidebar .nav-label-tools { animation-delay: 360ms; }
+.app-shell.is-entering .sidebar > .nav-item:nth-of-type(5) { animation-delay: 385ms; }
+.app-shell.is-entering .sidebar > .nav-item:nth-of-type(6) { animation-delay: 420ms; }
+.app-shell.is-entering .sidebar > .nav-item:nth-of-type(7) { animation-delay: 455ms; }
+.app-shell.is-entering .sidebar .sidebar-bottom { animation-delay: 500ms; }
+
+.app-shell.is-entering .topbar {
+  animation: kp-drop 520ms var(--ease-out-expo) 180ms backwards;
+}
+
+.app-shell.is-entering .nav-rail {
+  opacity: 0;
+}
+
+/* ── Sidebar: sliding active rail + lively icons ───────────── */
+.nav-rail {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 4px;
+  width: 3px;
+  height: 0;
+  border-radius: 3px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--red) 55%, white), var(--red));
+  box-shadow: 0 0 10px var(--glow), 0 0 22px var(--glow-soft);
+  opacity: 1;
+  pointer-events: none;
+  transition: transform 420ms var(--ease-spring), height 320ms var(--ease-out-expo),
+    opacity 240ms ease;
+}
+
+.nav-rail[data-hidden="true"] {
+  opacity: 0;
+}
+
+.sidebar .nav-item > span:first-child {
+  display: inline-block;
+  transition: transform 260ms var(--ease-spring), color 200ms ease, text-shadow 200ms ease;
+}
+
+.sidebar .nav-item:hover > span:first-child {
+  transform: translateX(2px) scale(1.14);
+}
+
+.sidebar .nav-item.active > span:first-child {
+  color: var(--red);
+  text-shadow: 0 0 12px var(--glow);
+}
+
+body[data-theme] .sidebar > .nav-item:hover:not(.active) {
+  transform: translateX(3px);
+}
+
+@media (max-width: 560px) {
+  body[data-theme] .sidebar > .nav-item:hover:not(.active) {
+    transform: none;
+  }
+}
+
+/* Live Match: heartbeat on the nav dot */
+@keyframes kp-live-beat {
+  0%, 100% { text-shadow: 0 0 0 transparent; opacity: .8; }
+  45%      { text-shadow: 0 0 10px currentColor, 0 0 18px currentColor; opacity: 1; }
+}
+
+.live-nav-icon {
+  animation: kp-live-beat 1.8s ease-in-out infinite;
+}
+
+/* Profile online dot breathes */
+.profile-mini .online-dot {
+  color: var(--green);
+  animation: kp-pulse-ring 2.4s ease-out infinite;
+}
+
+/* ── Logo glint (masked to the logo's own shape) ──────────── */
+.sidebar .brand-mark,
+.vault-gate-panel > .brand-mark {
+  position: relative;
+  transition: transform 320ms var(--ease-spring), filter 320ms ease;
+}
+
+.sidebar .brand-mark::after,
+.vault-gate-panel > .brand-mark::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 20%, rgba(255, 255, 255, .75) 50%, transparent 80%);
+  content: "";
+  pointer-events: none;
+  -webkit-mask: url("../assets/keeper.png") center / 90% no-repeat;
+  mask: url("../assets/keeper.png") center / 90% no-repeat;
+  mix-blend-mode: overlay;
+  animation: kp-glint 7s ease-in-out 1.2s infinite;
+}
+
+.sidebar .brand:hover .brand-mark {
+  transform: rotate(-4deg) scale(1.08);
+  filter: drop-shadow(0 0 10px var(--glow));
+}
+
+/* ── Topbar: page title slides in on navigation ────────────── */
+#page-title.is-changing {
+  animation: kp-title-in 380ms var(--ease-out-expo) both;
+}
+
+/* ── Cards: frost sheen sweep on hover ─────────────────────── */
+:is(.stat-card, .overview-metric-card, .performance-primary-card, .skin-card,
+  .profile-picker-card, .vault-account-row, .agent-showcase-item) {
+  position: relative;
+}
+
+:is(.stat-card, .overview-metric-card, .performance-primary-card, .skin-card,
+  .profile-picker-card, .vault-account-row, .agent-showcase-item)::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(105deg, transparent 38%, var(--sheen) 50%, transparent 62%)
+    150% 0 / 260% 100% no-repeat;
+  content: "";
+  pointer-events: none;
+}
+
+:is(.stat-card, .overview-metric-card, .performance-primary-card, .skin-card,
+  .profile-picker-card, .vault-account-row, .agent-showcase-item):hover::after {
+  background-position: -60% 0;
+  transition: background-position 900ms var(--ease-out-expo);
+}
+
+body[data-theme] :is(.stat-card, .overview-metric-card, .performance-primary-card, .skin-card):hover {
+  border-color: color-mix(in srgb, var(--red) 40%, var(--line));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--red) 14%, transparent),
+    0 18px 40px -22px var(--glow);
+}
+
+/* ── Buttons: sheen on primary, springy press ──────────────── */
+.button-primary:not(.is-loading) {
+  position: relative;
+  isolation: isolate;
+}
+
+.button-primary:not(.is-loading)::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .28) 50%, transparent 65%)
+    150% 0 / 260% 100% no-repeat;
+  content: "";
+  pointer-events: none;
+}
+
+.button-primary:not(.is-loading):not(:disabled):hover::after {
+  background-position: -60% 0;
+  transition: background-position 750ms var(--ease-out-expo);
+}
+
+.button:not(:disabled):hover,
+.icon-button:not(:disabled):hover {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 10px 26px -10px var(--glow);
+}
+
+.button,
+.icon-button {
+  transition-timing-function: var(--ease-spring);
+}
+
+/* Lock button: shackle wiggle on hover */
+.lock-vault-button svg {
+  transition: transform 360ms var(--ease-spring);
+}
+
+.lock-vault-button:hover svg {
+  transform: rotate(-10deg) translateY(-1px);
+}
+
+/* ── Inputs: focus glow grows in ───────────────────────────── */
+body :is(input, textarea, select):focus-visible {
+  transition: border-color 200ms ease, box-shadow 320ms var(--ease-out-expo);
+}
+
+/* ── Status pill: gentle breathing dot ─────────────────────── */
+.demo-pill i {
+  animation: kp-breathe 2.6s ease-in-out infinite;
+}
+
+/* Entrance animations from design-system.css used fill "both", which
+   pins transform after they finish and silently blocks hover lifts.
+   "backwards" keeps the hidden start state during delays only. */
+.page.active,
+.page.active :is(.overview-snapshot, .breakdown-panel, .recent-panel, .table-panel,
+  .chart-panel, .settings-panel, .vault-account-list-panel, .vault-account-detail,
+  .vault-empty-detail, .overview-metric-card, .overview-match-row, .stat-card,
+  .agent-showcase-item, .skin-card) {
+  animation-fill-mode: backwards;
+}
+
+/* ── Pause loops while the window is unfocused / hidden ────── */
+body.is-window-idle :is(.live-nav-icon, .profile-mini .online-dot, .demo-pill i),
+body.is-window-idle .brand-mark::after {
+  animation-play-state: paused;
+}

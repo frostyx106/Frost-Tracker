@@ -1,37 +1,37 @@
+/* ─────────────────────────────────────────────────────────────
+   KEEPER — typography
+   Oxanium (display) + Saira (text), both SIL OFL 1.1 and bundled
+   locally because the CSP only allows same-origin fonts.
+   Licenses: assets/fonts/OFL-Oxanium.txt, assets/fonts/OFL-Saira.txt
+   ───────────────────────────────────────────────────────────── */
+
 @font-face {
-  font-family: "Univers 75";
+  font-family: "Oxanium";
   font-style: normal;
-  font-weight: 700;
+  font-weight: 200 800;
   font-display: swap;
-  src: url("../assets/fonts/univers-75.woff2") format("woff2");
+  src: url("../assets/fonts/oxanium-var.woff2") format("woff2");
 }
 
 @font-face {
-  font-family: "Eurostile";
+  font-family: "Saira";
   font-style: normal;
-  font-weight: 400;
+  font-weight: 100 900;
   font-display: swap;
-  src: url("../assets/fonts/eurostile-regular.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Eurostile";
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("../assets/fonts/eurostile-bold.woff2") format("woff2");
+  src: url("../assets/fonts/saira-var.woff2") format("woff2");
 }
 
 :root {
-  --font-body: "Eurostile", sans-serif;
-  --font-heading: "Univers 75", sans-serif;
-  --font-interactive: "Space Grotesk", sans-serif;
+  --font-body: "Saira", "Segoe UI", system-ui, sans-serif;
+  --font-heading: "Oxanium", "Saira", "Segoe UI", system-ui, sans-serif;
+  --font-interactive: var(--font-body);
   --font: var(--font-body);
   --display: var(--font-heading);
 }
 
 body {
-  font-family: var(--font-body), sans-serif;
+  font-family: var(--font-body);
+  font-feature-settings: "kern", "liga";
 }
 
 h1,
@@ -40,11 +40,22 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: var(--font-heading), sans-serif !important;
+  font-family: var(--font-heading) !important;
+  font-weight: 600;
+  letter-spacing: -.005em;
 }
 
 body :is(button, select, option, a, summary, label, [role="button"], [role="tab"], .nav-item, .settings-tab) {
-  font-family: var(--font-interactive), sans-serif !important;
+  font-family: var(--font-interactive) !important;
+}
+
+body :is(.nav-item, .settings-tab, .button) {
+  font-weight: 500;
+  letter-spacing: .01em;
+}
+
+body :is(.button-primary, .button.button-primary) {
+  font-weight: 600;
 }
 
 body input,
@@ -53,11 +64,28 @@ body input::placeholder,
 body textarea::placeholder,
 body [role="tooltip"],
 body .tooltip {
-  font-family: var(--font-body), sans-serif !important;
+  font-family: var(--font-body) !important;
 }
 
+/* Micro labels: Oxanium caps read as HUD labels */
 body :is(.eyebrow, .nav-label, .stat-top, .muted-tag, .performance-card-label,
   .player-current-rank > div > span, .player-peak-rank > div > span, .player-level,
-  .table-panel th, .live-section-kicker, .live-coming-soon-label) {
-  font-family: var(--font-heading), sans-serif !important;
+  .table-panel th, .live-section-kicker, .live-coming-soon-label, .brand-sub, .demo-pill) {
+  font-family: var(--font-heading) !important;
+  font-weight: 600;
+  letter-spacing: .14em;
+}
+
+/* Brand wordmark */
+body .brand-name,
+body .window-titlebar-brand span {
+  font-family: var(--font-heading) !important;
+  font-weight: 700;
+  letter-spacing: .2em;
+}
+
+/* Numbers: fixed-width digits so count-ups don't jitter */
+body :is(.stat-value, .rank-current strong, .rank-metrics b, .match-score,
+  .player-metrics b, .overview-stats b, .snapshot-row b, td) {
+  font-variant-numeric: tabular-nums;
 }

@@ -409,6 +409,7 @@ function readCustomThemePalette() {
 
 function applyCustomThemeWallpaper() {
   const body = document.body;
+  body.toggleAttribute("data-has-wallpaper", Boolean(customThemeImageUrl));
   if (customThemeImageUrl) {
     body.style.setProperty("--custom-wallpaper-image", `url("${customThemeImageUrl}")`);
   } else {
@@ -2159,12 +2160,67 @@ function navigate(page) {
   if (target) target.classList.add("active");
   document.querySelectorAll(".nav-item").forEach(b => b.classList.toggle("active", b.dataset.page===page));
   const names = {overview:"Player Stats",matches:"Match History",live:"Live Match",compare:"Performance",vault:"Personal Vault",skins:"Skins",settings:"Settings"};
-  $("page-title").textContent = names[page] || "Overview";
+  setPageTitle(names[page] || "Overview");
+  updateNavRail();
   if (page === "skins") {
     renderSkinPage();
     loadSkinsCatalog();
   }
 }
+
+// ── Motion hooks (styles in motion.css) ──────────────────────
+function setPageTitle(text) {
+  const title = $("page-title");
+  if (title.textContent === text) return;
+  title.textContent = text;
+  title.classList.remove("is-changing");
+  void title.offsetWidth; // restart the animation
+  title.classList.add("is-changing");
+}
+
+let navRail = null;
+function updateNavRail() {
+  const sidebar = document.querySelector(".sidebar");
+  if (!sidebar) return;
+  if (!navRail) {
+    navRail = document.createElement("span");
+    navRail.className = "nav-rail";
+    navRail.setAttribute("aria-hidden", "true");
+    sidebar.appendChild(navRail);
+  }
+  const active = sidebar.querySelector(".nav-item.active[data-page]");
+  if (!active || !active.offsetHeight) {
+    navRail.dataset.hidden = "true";
+    return;
+  }
+  const inset = 9;
+  navRail.dataset.hidden = "false";
+  navRail.style.left = `${Math.max(2, active.offsetLeft - 7)}px`;
+  navRail.style.height = `${active.offsetHeight - inset * 2}px`;
+  navRail.style.transform = `translateY(${active.offsetTop + inset}px)`;
+}
+
+if (window.ResizeObserver) {
+  new ResizeObserver(() => updateNavRail()).observe(document.querySelector(".sidebar"));
+}
+
+let appShellEnterTimer = null;
+function playAppShellEntrance() {
+  const shell = $("app-shell");
+  window.clearTimeout(appShellEnterTimer);
+  shell.classList.remove("is-entering");
+  void shell.offsetWidth;
+  shell.classList.add("is-entering");
+  appShellEnterTimer = window.setTimeout(() => shell.classList.remove("is-entering"), 1100);
+}
+
+function syncWindowIdleState() {
+  document.body.classList.toggle("is-window-idle", document.hidden || !document.hasFocus());
+}
+window.addEventListener("focus", syncWindowIdleState);
+window.addEventListener("blur", syncWindowIdleState);
+document.addEventListener("visibilitychange", syncWindowIdleState);
+syncWindowIdleState();
 
 $("skins-retry").addEventListener("click", loadSkinsCatalog);
 $("skins-search").addEventListener("input", () => {
@@ -2879,6 +2935,7 @@ async function enterUnlockedVault(result) {
   profileAvatarSelection = currentProfile.avatar;
   $("vault-gate").hidden = true;
   $("app-shell").hidden = false;
+  playAppShellEntrance();
   navigate("overview");
   resetVaultAutoLockTimer();
 }

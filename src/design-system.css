@@ -6,27 +6,12 @@
    is normalised here.
    ───────────────────────────────────────────────────────────── */
 
-/* ── Local fonts (bundled: the CSP blocks remote stylesheets) ── */
-@font-face {
-  font-family: "DM Sans";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("../assets/fonts/dm-sans-var.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Space Grotesk";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("../assets/fonts/space-grotesk-var.woff2") format("woff2");
-}
+/* ── Fonts: declared in typography.css (Oxanium + Saira) ── */
 
 /* ── Tokens ─────────────────────────────────────────────────── */
 :root {
-  --font: "DM Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --display: "Space Grotesk", "DM Sans", "Segoe UI", system-ui, sans-serif;
+  --font: "Saira", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --display: "Oxanium", "Saira", "Segoe UI", system-ui, sans-serif;
 
   /* 4px spacing rhythm */
   --sp-1: 4px;

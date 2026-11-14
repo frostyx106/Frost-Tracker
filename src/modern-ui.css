@@ -1,0 +1,373 @@
+/* ─────────────────────────────────────────────────────────────
+   KEEPER — modern controls layer
+   Loaded after theme-backdrop.css, before motion.css. Restyles the
+   shared controls for every theme using the active theme's tokens:
+   - sidebar + settings tabs: borderless items, soft hover, tinted
+     active pill (the sliding .nav-rail marks the active page)
+   - segmented controls: inset track with a raised "thumb"
+   - chips: rounded pills, accent-filled when active
+   - buttons: soft-filled secondary, gradient primary with glow
+   - inputs/selects: soft wells with an accent focus ring
+   Glossy mode keeps its own glass shadows/blur on top of this.
+   ───────────────────────────────────────────────────────────── */
+
+body[data-theme] {
+  --ui-radius: 12px;
+  --ui-radius-sm: 9px;
+  --ui-fill: color-mix(in srgb, var(--text) 6%, transparent);
+  --ui-fill-hover: color-mix(in srgb, var(--text) 10%, transparent);
+  --ui-stroke: color-mix(in srgb, var(--text) 10%, transparent);
+  --ui-stroke-strong: color-mix(in srgb, var(--text) 18%, transparent);
+  --ui-accent-fill: color-mix(in srgb, var(--red) 18%, transparent);
+  --ui-accent-fill-hover: color-mix(in srgb, var(--red) 26%, transparent);
+  --ui-accent-text: color-mix(in srgb, var(--red) 70%, var(--text));
+  --ui-primary: var(--theme-primary, linear-gradient(135deg, color-mix(in srgb, var(--red) 80%, white), var(--red)));
+  --ui-on-primary: var(--theme-primary-text, #fff);
+  --ui-thumb: color-mix(in srgb, var(--text) 13%, transparent);
+  --ui-thumb-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 12px -4px rgba(0, 0, 0, .45);
+  --ui-well: color-mix(in srgb, var(--red) 5%, rgba(0, 0, 0, .28));
+  --ui-ring: 0 0 0 4px color-mix(in srgb, var(--red) 22%, transparent);
+}
+
+body[data-theme-mode="light"] {
+  --ui-fill: color-mix(in srgb, var(--red) 7%, rgba(255, 255, 255, .55));
+  --ui-fill-hover: color-mix(in srgb, var(--red) 12%, rgba(255, 255, 255, .7));
+  --ui-stroke: color-mix(in srgb, var(--red) 16%, rgba(0, 0, 0, .06));
+  --ui-stroke-strong: color-mix(in srgb, var(--red) 30%, rgba(0, 0, 0, .1));
+  --ui-accent-fill: color-mix(in srgb, var(--red) 14%, rgba(255, 255, 255, .6));
+  --ui-accent-fill-hover: color-mix(in srgb, var(--red) 20%, rgba(255, 255, 255, .6));
+  --ui-accent-text: color-mix(in srgb, var(--red) 82%, black);
+  --ui-thumb: #fff;
+  --ui-thumb-shadow: 0 1px 2px rgba(30, 20, 60, .12), 0 4px 14px -4px rgba(30, 20, 60, .22);
+  --ui-well: rgba(255, 255, 255, .72);
+}
+
+/* ── Sidebar navigation ────────────────────────────────────── */
+body[data-theme] .sidebar .nav-item {
+  height: 40px;
+  margin: 1px 0;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--ui-radius);
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  font-weight: 500;
+  /* older button rules blur the backdrop per item, which reads as a box */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body[data-theme] .sidebar .nav-item:hover {
+  border-color: transparent;
+  background: var(--ui-fill);
+  box-shadow: none;
+  color: var(--text);
+}
+
+body[data-theme] .sidebar .nav-item.active,
+body[data-theme] .sidebar .nav-item.active:hover {
+  border-color: color-mix(in srgb, var(--red) 22%, transparent);
+  background: linear-gradient(100deg, var(--ui-accent-fill), color-mix(in srgb, var(--red) 6%, transparent));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 8%, transparent);
+  color: var(--text);
+  font-weight: 600;
+}
+
+body[data-theme] .sidebar .nav-label {
+  padding: 14px 12px 8px;
+  color: color-mix(in srgb, var(--muted) 80%, transparent);
+  font-size: 10px;
+}
+
+body[data-theme] .sidebar #switch-profile-btn {
+  border-color: var(--ui-stroke);
+  background: var(--ui-fill);
+}
+
+body[data-theme] .sidebar #switch-profile-btn:hover {
+  background: var(--ui-fill-hover);
+}
+
+/* ── Settings tabs: same pill language as the sidebar ──────── */
+body[data-theme] #settings-page .settings-tab {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--ui-radius);
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease),
+    border-color var(--dur) var(--ease), transform 220ms var(--ease-spring, ease);
+}
+
+body[data-theme] #settings-page .settings-tab:hover {
+  background: var(--ui-fill);
+  color: var(--text);
+}
+
+body[data-theme] #settings-page .settings-tab.active,
+body[data-theme] #settings-page .settings-tab[aria-selected="true"] {
+  border-color: color-mix(in srgb, var(--red) 22%, transparent);
+  background: var(--ui-accent-fill);
+  color: var(--ui-accent-text);
+  font-weight: 600;
+}
+
+body[data-theme] #settings-page .settings-tab.active::after,
+body[data-theme] #settings-page .settings-tab.active::before {
+  display: none;
+}
+
+/* ── Segmented controls ────────────────────────────────────── */
+body[data-theme] :is(.appearance-style-control, .skins-view-switch) {
+  display: inline-flex;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid var(--ui-stroke);
+  border-radius: var(--ui-radius);
+  background: var(--ui-fill);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .12);
+}
+
+body[data-theme] :is(#settings-page .appearance-style-option, .skins-view-option) {
+  min-height: 32px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: var(--ui-radius-sm);
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  font-weight: 600;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition: background 200ms var(--ease), color 200ms var(--ease), box-shadow 200ms var(--ease);
+}
+
+body[data-theme] :is(#settings-page .appearance-style-option, .skins-view-option):hover {
+  color: var(--text);
+}
+
+body[data-theme] :is(#settings-page .appearance-style-option[aria-pressed="true"], .skins-view-option.active) {
+  border-color: color-mix(in srgb, var(--text) 8%, transparent);
+  background: var(--ui-thumb);
+  box-shadow: var(--ui-thumb-shadow);
+  color: var(--text);
+}
+
+/* ── Chips ─────────────────────────────────────────────────── */
+body[data-theme] :is(.skin-filter-chip, .skins-quick-filter, .recent-search-item) {
+  min-height: 32px;
+  padding: 0 13px;
+  border: 1px solid var(--ui-stroke);
+  border-radius: 999px;
+  background: var(--ui-fill);
+  box-shadow: none;
+  color: var(--text);
+  font-weight: 500;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition: background 180ms var(--ease), border-color 180ms var(--ease),
+    color 180ms var(--ease), box-shadow 220ms var(--ease), transform 220ms var(--ease-spring, ease);
+}
+
+body[data-theme] :is(.skin-filter-chip, .skins-quick-filter, .recent-search-item):hover {
+  border-color: var(--ui-stroke-strong);
+  background: var(--ui-fill-hover);
+  transform: translateY(-1px);
+}
+
+body[data-theme] :is(.skin-filter-chip.active, .skins-quick-filter.active, .skins-quick-filter[aria-pressed="true"]) {
+  border-color: transparent;
+  background: var(--ui-primary);
+  box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--red) 70%, transparent);
+  color: var(--ui-on-primary);
+}
+
+body[data-theme] .skin-filter-chip.active img {
+  filter: brightness(0) invert(1);
+}
+
+/* ── Buttons ───────────────────────────────────────────────── */
+body[data-theme] .button,
+body[data-theme] button.button-secondary {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--ui-stroke);
+  border-radius: var(--ui-radius);
+  background: var(--ui-fill);
+  color: var(--text);
+  font-weight: 600;
+}
+
+body[data-theme] .button:not(:disabled):hover,
+body[data-theme] button.button-secondary:not(:disabled):hover {
+  border-color: var(--ui-stroke-strong);
+  background: var(--ui-fill-hover);
+}
+
+body[data-theme] .button.button-primary,
+body[data-theme] button.button-primary {
+  border-color: color-mix(in srgb, white 18%, transparent);
+  background: var(--ui-primary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22),
+    0 8px 22px -10px color-mix(in srgb, var(--red) 80%, transparent);
+  color: var(--ui-on-primary);
+}
+
+body[data-theme] .button.button-primary:not(:disabled):hover,
+body[data-theme] button.button-primary:not(:disabled):hover {
+  border-color: color-mix(in srgb, white 30%, transparent);
+  background: var(--ui-primary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28),
+    0 12px 28px -10px color-mix(in srgb, var(--red) 90%, transparent);
+  filter: brightness(1.08) saturate(1.08);
+}
+
+body[data-theme] :is(.button.danger-action, .danger-action) {
+  border-color: color-mix(in srgb, var(--loss, #ff6f80) 30%, transparent);
+  background: color-mix(in srgb, var(--loss, #ff6f80) 10%, transparent);
+  color: var(--loss, #ff6f80);
+}
+
+body[data-theme] :is(.button.danger-action, .danger-action):not(:disabled):hover {
+  border-color: color-mix(in srgb, var(--loss, #ff6f80) 55%, transparent);
+  background: color-mix(in srgb, var(--loss, #ff6f80) 18%, transparent);
+  color: var(--loss, #ff6f80);
+}
+
+body[data-theme] .icon-button {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--ui-stroke);
+  border-radius: var(--ui-radius);
+  background: var(--ui-fill);
+  color: var(--text);
+}
+
+body[data-theme] .icon-button:not(:disabled):hover {
+  border-color: var(--ui-stroke-strong);
+  background: var(--ui-fill-hover);
+}
+
+body[data-theme] .text-button {
+  border-radius: 8px;
+  color: var(--ui-accent-text);
+  font-weight: 600;
+}
+
+body[data-theme] .text-button:not(:disabled):hover {
+  background: var(--ui-fill);
+}
+
+/* ── Inputs & selects ──────────────────────────────────────── */
+body[data-theme] :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  textarea,
+  select,
+  .search,
+  .filter-select
+) {
+  border: 1px solid var(--ui-stroke);
+  border-radius: var(--ui-radius);
+  background-color: var(--ui-well);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .08);
+  color: var(--text);
+  transition: border-color 180ms var(--ease), box-shadow 260ms var(--ease-out-expo, ease),
+    background-color 180ms var(--ease);
+}
+
+body[data-theme] :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  textarea,
+  select,
+  .filter-select
+):hover {
+  border-color: var(--ui-stroke-strong);
+}
+
+body[data-theme] :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  textarea,
+  select,
+  .filter-select
+):focus,
+body[data-theme] :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  textarea,
+  select,
+  .filter-select
+):focus-visible {
+  border-color: color-mix(in srgb, var(--red) 65%, transparent);
+  outline: none;
+  box-shadow: var(--ui-ring);
+}
+
+/* Selects: custom chevron drawn with currentColor */
+body[data-theme] :is(select, .filter-select) {
+  padding-right: 36px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 19px) 52%, calc(100% - 14px) 52%;
+  background-repeat: no-repeat;
+  background-size: 5px 5px, 5px 5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Settings-page theme rules use the `background` shorthand (ID
+   specificity), which would wipe the chevron — restate it there. */
+body[data-theme] #settings-page :is(select, .filter-select) {
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 19px) 52%, calc(100% - 14px) 52%;
+  background-repeat: no-repeat;
+  background-size: 5px 5px, 5px 5px;
+}
+
+/* Wrapped search fields: the wrapper is the field */
+body[data-theme] :is(.skins-search-wrap, .vault-search-wrap) {
+  border: 1px solid var(--ui-stroke);
+  border-radius: var(--ui-radius);
+  background: var(--ui-well);
+  transition: border-color 180ms var(--ease), box-shadow 260ms var(--ease-out-expo, ease);
+}
+
+body[data-theme] :is(.skins-search-wrap, .vault-search-wrap):focus-within {
+  border-color: color-mix(in srgb, var(--red) 65%, transparent);
+  box-shadow: var(--ui-ring);
+}
+
+body[data-theme] :is(.skins-search-wrap, .vault-search-wrap) input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+body[data-theme] :is(.skins-search-wrap, .vault-search-wrap) input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):is(:hover, :focus, :focus-visible) {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ── Panels & cards: softer, rounder ───────────────────────── */
+body[data-theme] :is(.panel, .stat-card, .settings-panel, #settings-page .settings-nav) {
+  border-radius: 16px;
+}
+
+body[data-theme-mode="light"] :is(.panel, .stat-card, .overview-metric-card, .settings-panel, #settings-page .settings-nav) {
+  box-shadow: 0 1px 2px rgba(40, 25, 70, .05), 0 14px 36px -22px rgba(40, 25, 70, .3);
+}
+
+body[data-theme] :is(.overview-metric-card, .performance-primary-card) {
+  border-radius: 14px;
+}
+
+/* Status pill */
+body[data-theme] .demo-pill {
+  border: 1px solid var(--ui-stroke);
+  border-radius: 999px;
+  background: var(--ui-fill);
+}
